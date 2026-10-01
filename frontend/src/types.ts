@@ -71,6 +71,13 @@ export interface ScreenerResponse {
   meta: ScreenerMeta;
 }
 
+export interface SourceStatus {
+  source: string;
+  connected: boolean;
+  latency_ms: number | null;
+  checked_at: string;
+}
+
 export interface Filters {
   option_type: OptionTypeFilter;
   strategy: Strategy;
