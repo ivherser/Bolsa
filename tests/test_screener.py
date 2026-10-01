@@ -252,6 +252,36 @@ def test_deadline_truncates():
     assert any("parciales" in w for w in resp.meta.warnings)
 
 
+def test_credit_spread_rejects_far_long_leg():
+    # Solo existe candidato en 50 (ancho real 50 >> 5) → sin resultado.
+    chain = {
+        "puts": [contract(100, 1.0, 1.4), contract(50, 0.5, 0.7)],
+        "calls": [],
+    }
+    p = FakeProvider(expirations={"AAA": (exp(30),)}, chains={("AAA", exp(30)): chain})
+    resp = run_screener(
+        base_params(option_type="put", strategy="credit_spread", spread_width=5),
+        provider=p,
+        today=TODAY,
+    )
+    assert resp.results == []
+
+
+def test_credit_spread_rejects_tiny_max_loss():
+    # premium ≈ width → riesgo < $1/contrato → omitido.
+    chain = {
+        "puts": [contract(100, 4.99, 5.01), contract(95, 0.0, 0.005)],
+        "calls": [],
+    }
+    p = FakeProvider(expirations={"AAA": (exp(30),)}, chains={("AAA", exp(30)): chain})
+    resp = run_screener(
+        base_params(option_type="put", strategy="credit_spread", spread_width=5),
+        provider=p,
+        today=TODAY,
+    )
+    assert resp.results == []
+
+
 def test_long_put_mid_above_strike_skipped():
     # mid > strike → breakeven <= 0 → contrato omitido, el resto sigue.
     chain = {

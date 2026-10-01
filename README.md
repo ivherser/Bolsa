@@ -85,6 +85,8 @@ ruff check . && ruff format --check .
 cd frontend && npm run typecheck && npm run build
 ```
 
+CI (`.github/workflows/ci.yml`, en PRs y pushes a `main`): ruff + pytest + pip-audit, typecheck + build + npm audit del frontend, y escaneo de secretos con gitleaks.
+
 ## Despliegue
 
 Importar el repo en Vercel (preset «Other»; `vercel.json` fija build/output). No hacen falta variables de entorno. Cada push a `main` despliega frontend + API. Variables opcionales: `RISK_FREE_RATE` (defecto 0.045, válido [0, 0.2]) y `SCREENER_DEADLINE_SECONDS` (defecto 8, válido [0.1, 60]).
