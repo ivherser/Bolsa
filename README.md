@@ -95,5 +95,5 @@ Importar el repo en Vercel (preset «Other»; `vercel.json` fija build/output). 
 
 - Datos de Yahoo Finance con retraso ~15 min y API no oficial: posible rate-limiting/429 y bloqueo de IPs de datacenter.
 - Griegas calculadas (no de mercado); sin dividendos.
-- Caché en memoria (TTL 15 min) solo persiste entre invocaciones calientes de la misma instancia; además la CDN cachea respuestas 200 (s-maxage=300).
+- Caché en memoria (TTL 15 min) solo persiste entre invocaciones calientes de la misma instancia; además la CDN de Vercel cachea respuestas 200 vía `Vercel-CDN-Cache-Control: max-age=300, stale-while-revalidate=600` (el navegador recibe `Cache-Control: no-cache`).
 - La función está configurada con `maxDuration: 10` y un deadline interno de 8 s: al superarlo devuelve resultados parciales (`truncated` + aviso). La documentación actual de Vercel indica hasta 300 s en Hobby con Fluid compute — el límite de 10 s es conservador y puede subirse en `vercel.json`. Por eso también hay máx. 5 tickers/llamada y `max_expirations` por ticker.

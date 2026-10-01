@@ -47,7 +47,8 @@ def test_200_and_cache_header(server, monkeypatch):
     assert resp.status == 200
     body = json.loads(resp.read())
     assert body["meta"]["tickers"] == ["SPY"]
-    assert "s-maxage=300" in resp.headers["Cache-Control"]
+    assert resp.headers["Cache-Control"] == "no-cache"
+    assert resp.headers["Vercel-CDN-Cache-Control"] == "max-age=300, stale-while-revalidate=600"
     assert resp.headers["X-Content-Type-Options"] == "nosniff"
 
 
@@ -59,6 +60,8 @@ def test_400_no_input_echo(server, monkeypatch):
     assert body["error"] == "Parámetros inválidos"
     assert "details" in body
     assert "<script>" not in json.dumps(body)
+    assert resp.headers["Cache-Control"] == "no-store"
+    assert resp.headers.get("Vercel-CDN-Cache-Control") is None
 
 
 def test_500_no_leak(server, monkeypatch):

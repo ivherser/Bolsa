@@ -21,11 +21,21 @@ logger = logging.getLogger(__name__)
 
 
 class handler(BaseHTTPRequestHandler):
-    def _send_json(self, status: int, body: bytes, cache: str = "no-store") -> None:
+    def _send_json(
+        self,
+        status: int,
+        body: bytes,
+        cache: str = "no-store",
+        cdn_cache: str | None = None,
+    ) -> None:
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Cache-Control", cache)
+        # Solo la CDN de Vercel consume este header y lo elimina antes de
+        # entregar la respuesta al cliente.
+        if cdn_cache is not None:
+            self.send_header("Vercel-CDN-Cache-Control", cdn_cache)
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
@@ -57,7 +67,8 @@ class handler(BaseHTTPRequestHandler):
             self._send_json(
                 200,
                 response.model_dump_json().encode(),
-                cache="public, s-maxage=300, stale-while-revalidate=600",
+                cache="no-cache",
+                cdn_cache="max-age=300, stale-while-revalidate=600",
             )
         except Exception:
             logger.exception("Error interno en /api/screener")
