@@ -45,7 +45,11 @@ vercel.json       # build del frontend + configuración de la función
 
 Parámetros desconocidos → `400 {"error":"Parámetros inválidos","details":[…]}`.
 
+`GET /api/overview?tickers=…&dte=30` devuelve por cada ticker su cotización (último, cierre previo, variación, volumen) y las griegas ATM (call y put) de la expiración más cercana al `dte` objetivo: `{"items": [{"ticker","spot","previous_close","change","change_pct","volume","expiration","dte","atm_strike","atm_iv","call","put","error"}], "meta": {"risk_free_rate","generated_at","truncated","warnings"}}`. Caché: `no-cache` al navegador y `Vercel-CDN-Cache-Control: max-age=60, stale-while-revalidate=120`; errores `no-store`. El panel «Resumen de tickers» lo muestra encima de la tabla de resultados.
+
 `GET /api/status` comprueba si Yahoo responde (options de SPY, con memo de 60 s y timeout de 5 s) y devuelve `{"source": "yahoo", "connected": true, "latency_ms": 120, "checked_at": "2025-01-01T00:00:00Z"}`. El indicador del encabezado ("Yahoo Finance" con punto verde/rojo/ámbar) lo usa para mostrar la fuente y el estado de conexión; es clicable para re-comprobar.
+
+Los tickers, el preset y los filtros se guardan en el navegador (localStorage, clave `bolsa:state:v1`) y se restauran al recargar; el botón «Restablecer» los limpia.
 
 ### Respuesta
 

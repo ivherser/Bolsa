@@ -42,6 +42,31 @@ MAX_TICKERS = 5
 _TICKER_PATTERN = re.compile(TICKER_RE)
 
 
+def parse_tickers(value: object) -> list[str]:
+    if isinstance(value, str):
+        raw = value.split(",")
+    elif isinstance(value, list):
+        raw = []
+        for item in value:
+            if isinstance(item, str):
+                raw.extend(item.split(","))
+            else:
+                raw.append(item)
+    else:
+        raw = [value]
+    seen: set[str] = set()
+    tickers: list[str] = []
+    for item in raw:
+        ticker = str(item).strip().upper()
+        if not ticker or ticker in seen:
+            continue
+        if not _TICKER_PATTERN.match(ticker):
+            raise ValueError(f"Ticker inválido: {ticker!r}")
+        seen.add(ticker)
+        tickers.append(ticker)
+    return tickers
+
+
 class ScreenerParams(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -66,28 +91,7 @@ class ScreenerParams(BaseModel):
     @field_validator("tickers", mode="before")
     @classmethod
     def _parse_tickers(cls, value: object) -> list[str]:
-        if isinstance(value, str):
-            raw = value.split(",")
-        elif isinstance(value, list):
-            raw = []
-            for item in value:
-                if isinstance(item, str):
-                    raw.extend(item.split(","))
-                else:
-                    raw.append(item)
-        else:
-            raw = [value]
-        seen: set[str] = set()
-        tickers: list[str] = []
-        for item in raw:
-            ticker = str(item).strip().upper()
-            if not ticker or ticker in seen:
-                continue
-            if not _TICKER_PATTERN.match(ticker):
-                raise ValueError(f"Ticker inválido: {ticker!r}")
-            seen.add(ticker)
-            tickers.append(ticker)
-        return tickers
+        return parse_tickers(value)
 
     @model_validator(mode="after")
     def _check_ranges(self) -> ScreenerParams:
@@ -156,3 +160,52 @@ class StatusResponse(BaseModel):
     connected: bool
     latency_ms: int | None = None
     checked_at: str  # ISO UTC
+
+
+class OverviewParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    tickers: Annotated[list[str], Field(min_length=1, max_length=MAX_TICKERS)]
+    dte: int = Field(30, ge=1, le=365)
+
+    @field_validator("tickers", mode="before")
+    @classmethod
+    def _parse_tickers(cls, value: object) -> list[str]:
+        return parse_tickers(value)
+
+
+class AtmLeg(BaseModel):
+    strike: float
+    bid: float
+    ask: float
+    mid: float
+    iv: float  # porcentaje
+    greeks: Greeks
+
+
+class TickerOverview(BaseModel):
+    ticker: str
+    spot: float
+    previous_close: float | None = None
+    change: float | None = None
+    change_pct: float | None = None
+    volume: int | None = None
+    expiration: str | None = None
+    dte: int | None = None
+    atm_strike: float | None = None
+    atm_iv: float | None = None  # porcentaje
+    call: AtmLeg | None = None
+    put: AtmLeg | None = None
+    error: str | None = None
+
+
+class OverviewMeta(BaseModel):
+    risk_free_rate: float
+    generated_at: str  # ISO UTC
+    truncated: bool
+    warnings: list[str]
+
+
+class OverviewResponse(BaseModel):
+    items: list[TickerOverview]
+    meta: OverviewMeta

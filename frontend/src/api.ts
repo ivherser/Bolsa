@@ -1,11 +1,14 @@
 import type {
   Filters,
   OptionResult,
+  OverviewMeta,
+  OverviewResponse,
   ScreenerMeta,
   ScreenerResponse,
   SortField,
   SortOrder,
   SourceStatus,
+  TickerOverviewItem,
 } from "./types";
 
 const CHUNK = 5; // máximo de tickers por llamada a la API
@@ -70,6 +73,44 @@ export async function fetchStatus(signal?: AbortSignal): Promise<SourceStatus> {
   const res = await fetch("/api/status", { signal: signal ?? null });
   if (!res.ok) throw new Error(`Error ${res.status}`);
   return (await res.json()) as SourceStatus;
+}
+
+export interface MergedOverview {
+  items: TickerOverviewItem[];
+  meta: OverviewMeta;
+}
+
+export async function fetchOverview(
+  tickers: string[],
+  dte: number,
+  signal?: AbortSignal,
+): Promise<MergedOverview> {
+  const groups = chunk(tickers, CHUNK);
+  const responses = await Promise.all(
+    groups.map(async (g) => {
+      const p = new URLSearchParams({ tickers: g.join(","), dte: String(dte) });
+      const res = await fetch(`/api/overview?${p.toString()}`, {
+        signal: signal ?? null,
+      });
+      if (!res.ok) throw new Error(`Error ${res.status}`);
+      return (await res.json()) as OverviewResponse;
+    }),
+  );
+  const merged: MergedOverview = {
+    items: [],
+    meta: {
+      risk_free_rate: responses[0]?.meta.risk_free_rate ?? 0.045,
+      generated_at: responses[0]?.meta.generated_at ?? "",
+      truncated: false,
+      warnings: [],
+    },
+  };
+  for (const r of responses) {
+    merged.items.push(...r.items);
+    merged.meta.warnings.push(...r.meta.warnings);
+    if (r.meta.truncated) merged.meta.truncated = true;
+  }
+  return merged;
 }
 
 export async function fetchScreener(
