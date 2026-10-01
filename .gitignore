@@ -1,0 +1,43 @@
+# Secrets y credenciales
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+credentials.json
+serviceAccountKey.json
+**/secrets/
+**/secret.*
+*.credential
+token.json
+
+# IDE y SO
+.idea/
+.vscode/settings.json
+*.swp
+.DS_Store
+Thumbs.db
+
+# Terraform state
+*.tfstate
+*.tfstate.*
+.terraform/
+
+# Build outputs
+.next/
+build/
+dist/
+
+# Python
+__pycache__/
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+
+# Vercel
+.vercel/

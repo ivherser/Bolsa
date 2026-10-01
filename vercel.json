@@ -1,0 +1,14 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "cd frontend && npm ci",
+  "buildCommand": "cd frontend && npm run build",
+  "outputDirectory": "frontend/dist",
+  "devCommand": "cd frontend && npm run dev -- --port $PORT",
+  "functions": {
+    "api/screener.py": {
+      "maxDuration": 10,
+      "excludeFiles": "{frontend/**,tests/**,scripts/**,**/node_modules/**,**/__pycache__/**,**/.pytest_cache/**}"
+    }
+  }
+}
