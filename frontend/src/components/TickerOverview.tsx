@@ -16,12 +16,23 @@ function compactVolume(v: number | null): string {
   return nf.format(v);
 }
 
-function GreeksCell({ g }: { g: Greeks | null }) {
-  if (!g) return <td>—</td>;
+function GreeksCells({ g }: { g: Greeks | null }) {
+  if (!g)
+    return (
+      <>
+        <td>—</td>
+        <td>—</td>
+        <td>—</td>
+        <td>—</td>
+      </>
+    );
   return (
-    <td>
-      {nf4.format(g.delta)} {nf4.format(g.gamma)} {nf4.format(g.theta)} {nf4.format(g.vega)}
-    </td>
+    <>
+      <td>{nf4.format(g.delta)}</td>
+      <td>{nf4.format(g.gamma)}</td>
+      <td>{nf4.format(g.theta)}</td>
+      <td>{nf4.format(g.vega)}</td>
+    </>
   );
 }
 
@@ -41,6 +52,7 @@ export default function TickerOverview({
   onLoadError,
 }: Props) {
   const [items, setItems] = useState<TickerOverviewItem[] | null>(null);
+  const [dteDraft, setDteDraft] = useState(String(dte));
   const [warnings, setWarnings] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -84,6 +96,24 @@ export default function TickerOverview({
     };
   }, [load]);
 
+  useEffect(() => {
+    setDteDraft(String(dte));
+  }, [dte]);
+
+  const dteValid = /^\d+$/.test(dteDraft) && Number(dteDraft) >= 1 && Number(dteDraft) <= 365;
+
+  const onDteInput = (raw: string) => {
+    setDteDraft(raw);
+    const v = Number(raw);
+    if (/^\d+$/.test(raw) && Number.isInteger(v) && v >= 1 && v <= 365) {
+      onDteChange(v);
+    }
+  };
+
+  const onDteBlur = () => {
+    if (!dteValid) setDteDraft(String(dte));
+  };
+
   return (
     <section className="overview">
       <div className="overview-header">
@@ -95,8 +125,11 @@ export default function TickerOverview({
             type="number"
             min={1}
             max={365}
-            value={dte}
-            onChange={(e) => onDteChange(Number(e.target.value))}
+            value={dteDraft}
+            onChange={(e) => onDteInput(e.target.value)}
+            onBlur={onDteBlur}
+            aria-invalid={!dteValid}
+            className={dteValid ? "" : "invalid"}
           />
           <button type="button" className="secondary" onClick={load} disabled={loading || !tickers.length}>
             Actualizar
@@ -119,15 +152,29 @@ export default function TickerOverview({
           <table className="overview-table">
             <thead>
               <tr>
-                <th>Ticker</th>
-                <th>Precio</th>
-                <th>Var.</th>
-                <th>Volumen</th>
-                <th>Exp. (DTE)</th>
-                <th>Strike ATM</th>
-                <th>IV ATM</th>
-                <th>Call Δ Γ Θ ν</th>
-                <th>Put Δ Γ Θ ν</th>
+                <th rowSpan={2}>Ticker</th>
+                <th rowSpan={2}>Precio</th>
+                <th rowSpan={2}>Var.</th>
+                <th rowSpan={2}>Volumen</th>
+                <th rowSpan={2}>Exp. (DTE)</th>
+                <th rowSpan={2}>Strike ATM</th>
+                <th rowSpan={2}>IV ATM</th>
+                <th colSpan={4} className="greek-group">
+                  Call
+                </th>
+                <th colSpan={4} className="greek-group">
+                  Put
+                </th>
+              </tr>
+              <tr>
+                <th className="greek-group">Δ</th>
+                <th>Γ</th>
+                <th>Θ</th>
+                <th>ν</th>
+                <th className="greek-group">Δ</th>
+                <th>Γ</th>
+                <th>Θ</th>
+                <th>ν</th>
               </tr>
             </thead>
             <tbody>
@@ -151,13 +198,13 @@ export default function TickerOverview({
                   <td>{it.atm_strike !== null ? nf.format(it.atm_strike) : "—"}</td>
                   <td>{it.atm_iv !== null ? `${nf.format(it.atm_iv)}%` : "—"}</td>
                   {it.error ? (
-                    <td colSpan={2} className="neg" style={{ fontSize: 12 }}>
+                    <td colSpan={8} className="overview-error">
                       {it.error}
                     </td>
                   ) : (
                     <>
-                      <GreeksCell g={it.call?.greeks ?? null} />
-                      <GreeksCell g={it.put?.greeks ?? null} />
+                      <GreeksCells g={it.call?.greeks ?? null} />
+                      <GreeksCells g={it.put?.greeks ?? null} />
                     </>
                   )}
                 </tr>

@@ -84,10 +84,7 @@ export default function App() {
       </header>
       <div className="layout">
         <aside className="sidebar">
-          <PresetBar activeId={presetId} onSelect={applyPreset} />
-          <button type="button" className="secondary reset-btn" onClick={resetAll}>
-            Restablecer
-          </button>
+          <PresetBar activeId={presetId} onSelect={applyPreset} onReset={resetAll} />
           <TickerChips tickers={tickers} onChange={setTickers} />
           <FilterPanel
             filters={filters}

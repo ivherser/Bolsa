@@ -410,9 +410,42 @@ footer.disclaimer {
   padding: 6px 8px;
 }
 
-.reset-btn {
-  width: 100%;
-  margin-bottom: 10px;
+.label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.label-row label {
+  margin-bottom: 3px;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  color: var(--accent);
+  padding: 0;
   font-size: 12px;
-  padding: 5px 10px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.link-btn:hover {
+  color: #7ba7ff;
+}
+
+.overview-controls input.invalid {
+  border-color: var(--red);
+  outline: none;
+}
+
+.overview-table th.greek-group {
+  text-align: center;
+  border-left: 1px solid var(--border);
+}
+
+.overview-table td.overview-error {
+  color: var(--red);
+  font-size: 12px;
+  opacity: 0.85;
 }
