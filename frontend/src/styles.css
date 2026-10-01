@@ -30,11 +30,74 @@ body {
 header {
   padding: 12px 20px;
   border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 header h1 {
   margin: 0;
   font-size: 20px;
+}
+
+.source-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 6px 14px;
+  color: var(--text);
+  font-size: 12px;
+}
+
+.source-status:disabled {
+  opacity: 0.8;
+  cursor: wait;
+}
+
+.source-status .source-name {
+  font-weight: 600;
+}
+
+.source-status .source-label {
+  color: var(--muted);
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dot.ok {
+  background: var(--green);
+  box-shadow: 0 0 6px rgba(47, 191, 113, 0.7);
+}
+
+.dot.down {
+  background: #e5484d;
+}
+
+.dot.checking {
+  background: #ffb020;
+  animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dot.checking {
+    animation: none;
+  }
 }
 
 .layout {

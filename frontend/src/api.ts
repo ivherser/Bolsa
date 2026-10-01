@@ -5,6 +5,7 @@ import type {
   ScreenerResponse,
   SortField,
   SortOrder,
+  SourceStatus,
 } from "./types";
 
 const CHUNK = 5; // máximo de tickers por llamada a la API
@@ -63,6 +64,12 @@ export function sortResults(
 export interface MergedResponse {
   results: OptionResult[];
   meta: ScreenerMeta;
+}
+
+export async function fetchStatus(signal?: AbortSignal): Promise<SourceStatus> {
+  const res = await fetch("/api/status", { signal: signal ?? null });
+  if (!res.ok) throw new Error(`Error ${res.status}`);
+  return (await res.json()) as SourceStatus;
 }
 
 export async function fetchScreener(

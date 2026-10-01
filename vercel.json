@@ -9,6 +9,10 @@
     "api/screener.py": {
       "maxDuration": 10,
       "excludeFiles": "{frontend/**,tests/**,scripts/**,**/node_modules/**,**/__pycache__/**,**/.pytest_cache/**}"
+    },
+    "api/status.py": {
+      "maxDuration": 10,
+      "excludeFiles": "{frontend/**,tests/**,scripts/**,**/node_modules/**,**/__pycache__/**,**/.pytest_cache/**}"
     }
   }
 }

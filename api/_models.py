@@ -149,3 +149,10 @@ class ScreenerMeta(BaseModel):
 class ScreenerResponse(BaseModel):
     results: list[OptionResult]
     meta: ScreenerMeta
+
+
+class StatusResponse(BaseModel):
+    source: str
+    connected: bool
+    latency_ms: int | None = None
+    checked_at: str  # ISO UTC

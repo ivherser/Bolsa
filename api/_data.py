@@ -6,6 +6,7 @@ entre invocaciones calientes de la misma instancia.
 
 from __future__ import annotations
 
+import concurrent.futures
 import logging
 import math
 import threading
@@ -23,9 +24,15 @@ _cache: dict[tuple[Any, ...], tuple[float, Any]] = {}
 _lock = threading.Lock()
 
 
+_STATUS_MEMO_TTL = 60.0
+_status_memo: tuple[float, tuple[bool, int | None]] | None = None
+
+
 def clear_cache() -> None:
+    global _status_memo
     with _lock:
         _cache.clear()
+        _status_memo = None
 
 
 def _cached(key: tuple[Any, ...], fetch):
@@ -108,6 +115,33 @@ def _df_to_records(df: pd.DataFrame) -> list[dict]:
         }
         for rec in records
     ]
+
+
+def check_yahoo(timeout_s: float = 5.0) -> tuple[bool, int | None]:
+    """Comprueba si Yahoo responde (options de SPY). Sin usar `_cache`;
+    el resultado se memoiza 60 s para no golpear Yahoo en cada poll."""
+    global _status_memo
+    now = time.monotonic()
+    with _lock:
+        if _status_memo is not None and now - _status_memo[0] < _STATUS_MEMO_TTL:
+            return _status_memo[1]
+
+    start = time.monotonic()
+    executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+    try:
+        fut = executor.submit(lambda: tuple(yf.Ticker("SPY").options))
+        options = fut.result(timeout=timeout_s)
+        latency_ms = int((time.monotonic() - start) * 1000)
+        result: tuple[bool, int | None] = (bool(options), latency_ms if options else None)
+    except Exception:
+        logger.info("check_yahoo falló o agotó el timeout")
+        result = (False, None)
+    finally:
+        executor.shutdown(wait=False, cancel_futures=True)
+
+    with _lock:
+        _status_memo = (time.monotonic(), result)
+    return result
 
 
 def get_chain(ticker: str, expiration: str) -> tuple[dict, bool]:

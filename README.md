@@ -45,6 +45,8 @@ vercel.json       # build del frontend + configuración de la función
 
 Parámetros desconocidos → `400 {"error":"Parámetros inválidos","details":[…]}`.
 
+`GET /api/status` comprueba si Yahoo responde (options de SPY, con memo de 60 s y timeout de 5 s) y devuelve `{"source": "yahoo", "connected": true, "latency_ms": 120, "checked_at": "2025-01-01T00:00:00Z"}`. El indicador del encabezado ("Yahoo Finance" con punto verde/rojo/ámbar) lo usa para mostrar la fuente y el estado de conexión; es clicable para re-comprobar.
+
 ### Respuesta
 
 `{"results": [OptionResult…], "meta": {tickers, spots, risk_free_rate, generated_at, expirations_scanned, cache_hits, truncated, warnings, count}}`

@@ -4,6 +4,7 @@ import DetailPanel from "./components/DetailPanel";
 import FilterPanel from "./components/FilterPanel";
 import PresetBar from "./components/PresetBar";
 import ResultsTable from "./components/ResultsTable";
+import SourceStatus from "./components/SourceStatus";
 import TickerChips from "./components/TickerChips";
 import { DEFAULT_PRESET_ID, DEFAULT_TICKERS, PRESETS } from "./presets";
 import type { Filters, OptionResult } from "./types";
@@ -20,6 +21,8 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<OptionResult | null>(null);
+  const [searchErrorKey, setSearchErrorKey] = useState(0);
+  const [lastSearchOk, setLastSearchOk] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
 
   const applyPreset = (id: string) => {
@@ -46,10 +49,12 @@ export default function App() {
       setResults(resp.results);
       setWarnings(resp.meta.warnings);
       setTruncated(resp.meta.truncated);
+      setLastSearchOk(Date.now());
     } catch (e) {
       if ((e as Error).name !== "AbortError") {
         setError(e instanceof Error ? e.message : "Error desconocido");
         setResults(null);
+        setSearchErrorKey((k) => k + 1);
       }
     } finally {
       setLoading(false);
@@ -60,6 +65,7 @@ export default function App() {
     <div className="app">
       <header>
         <h1>Bolsa — Screener de opciones</h1>
+        <SourceStatus refreshKey={searchErrorKey} lastSearchOk={lastSearchOk} />
       </header>
       <div className="layout">
         <aside className="sidebar">
