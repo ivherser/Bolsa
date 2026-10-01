@@ -1,0 +1,6 @@
+# Escaneo de secretos antes de cada commit (política de seguridad).
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.24.3
+    hooks:
+      - id: gitleaks
