@@ -298,12 +298,9 @@ def _evaluate_contract(
         long_strike = long_leg["strike"]
         long_mid = (long_leg["bid"] + long_leg["ask"]) / 2.0
         width = abs(K - long_strike)
-        # En cadenas dispersas la pata elegida puede quedar muy lejos del
-        # ancho pedido; se acepta solo dentro de [0.5w, 1.5w].
         if abs(width - params.spread_width) > 0.5 * params.spread_width:
             return None
         premium = mid - long_mid
-        # premium >= width falla con flotantes (209.9999); exige riesgo real.
         if premium <= 0 or width - premium < 0.01:
             return None
         if otype == "put":
