@@ -35,11 +35,11 @@ def clear_cache() -> None:
         _status_memo = None
 
 
-def _cached(key: tuple[Any, ...], fetch):
+def _cached(key: tuple[Any, ...], fetch, ttl: float = CACHE_TTL_SECONDS):
     now = time.monotonic()
     with _lock:
         entry = _cache.get(key)
-        if entry is not None and now - entry[0] < CACHE_TTL_SECONDS:
+        if entry is not None and now - entry[0] < ttl:
             return entry[1], True
     value = fetch()
     with _lock:
@@ -63,6 +63,41 @@ def get_spot(ticker: str) -> tuple[float, bool]:
         return spot
 
     return _cached(("spot", ticker), fetch)
+
+
+def get_quote(ticker: str) -> tuple[dict, bool]:
+    """Cotización rápida (last, previous_close, volume) con TTL de 60 s."""
+
+    def fetch() -> dict:
+        info = yf.Ticker(ticker).fast_info
+        last = float("nan")
+        try:
+            last = float(info["last_price"])
+        except Exception:
+            logger.info("fast_info falló para %s, usando history", ticker)
+        if not math.isfinite(last) or last <= 0:
+            hist = yf.Ticker(ticker).history(period="5d")
+            if not hist.empty:
+                last = float(hist["Close"].iloc[-1])
+        if not math.isfinite(last) or last <= 0:
+            raise ValueError(f"Precio no disponible para {ticker}")
+
+        def _opt(key, cast):
+            try:
+                v = info[key]
+            except Exception:
+                return None
+            if v is None or (isinstance(v, float) and not math.isfinite(v)):
+                return None
+            return cast(v)
+
+        return {
+            "last": last,
+            "previous_close": _opt("previous_close", float),
+            "volume": _opt("last_volume", int),
+        }
+
+    return _cached(("quote", ticker), fetch, ttl=60)
 
 
 def get_expirations(ticker: str) -> tuple[tuple[str, ...], bool]:

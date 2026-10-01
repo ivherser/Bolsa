@@ -360,3 +360,92 @@ footer.disclaimer {
   border: 1px solid var(--border);
   border-radius: 8px;
 }
+
+.overview {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+}
+
+.overview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.overview-header h2 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.overview-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.overview-controls label {
+  margin: 0;
+}
+
+.overview-controls input {
+  width: 70px;
+}
+
+.overview-scroll {
+  overflow-x: auto;
+}
+
+.overview-table {
+  font-size: 12px;
+}
+
+.overview-table th,
+.overview-table td {
+  padding: 6px 8px;
+}
+
+.label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.label-row label {
+  margin-bottom: 3px;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  color: var(--accent);
+  padding: 0;
+  font-size: 12px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.link-btn:hover {
+  color: #7ba7ff;
+}
+
+.overview-controls input.invalid {
+  border-color: var(--red);
+  outline: none;
+}
+
+.overview-table th.greek-group {
+  text-align: center;
+  border-left: 1px solid var(--border);
+}
+
+.overview-table td.overview-error {
+  color: var(--red);
+  font-size: 12px;
+  opacity: 0.85;
+}

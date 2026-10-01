@@ -78,6 +78,43 @@ export interface SourceStatus {
   checked_at: string;
 }
 
+export interface AtmLeg {
+  strike: number;
+  bid: number;
+  ask: number;
+  mid: number;
+  iv: number;
+  greeks: Greeks;
+}
+
+export interface TickerOverviewItem {
+  ticker: string;
+  spot: number;
+  previous_close: number | null;
+  change: number | null;
+  change_pct: number | null;
+  volume: number | null;
+  expiration: string | null;
+  dte: number | null;
+  atm_strike: number | null;
+  atm_iv: number | null;
+  call: AtmLeg | null;
+  put: AtmLeg | null;
+  error: string | null;
+}
+
+export interface OverviewMeta {
+  risk_free_rate: number;
+  generated_at: string;
+  truncated: boolean;
+  warnings: string[];
+}
+
+export interface OverviewResponse {
+  items: TickerOverviewItem[];
+  meta: OverviewMeta;
+}
+
 export interface Filters {
   option_type: OptionTypeFilter;
   strategy: Strategy;
