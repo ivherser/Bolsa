@@ -232,21 +232,38 @@ def test_provider_failure_warns_and_continues():
 def test_deadline_truncates():
     class SlowProvider(FakeProvider):
         def get_chain(self, ticker, expiration):
-            time.sleep(1.0)
+            time.sleep(2.0)
             return super().get_chain(ticker, expiration)
 
     p = SlowProvider(
         expirations={"AAA": (exp(30),)},
         chains={("AAA", exp(30)): puts_chain()},
     )
+    t0 = time.monotonic()
     resp = run_screener(
         base_params(option_type="put", strategy="short"),
         provider=p,
         today=TODAY,
         deadline_s=0.2,
     )
+    elapsed = time.monotonic() - t0
+    assert elapsed < 1.0  # el deadline debe acotar el tiempo de respuesta
     assert resp.meta.truncated is True
     assert any("parciales" in w for w in resp.meta.warnings)
+
+
+def test_long_put_mid_above_strike_skipped():
+    # mid > strike → breakeven <= 0 → contrato omitido, el resto sigue.
+    chain = {
+        "puts": [
+            contract(90, 95.0, 100.0, symbol="BAD_PUT"),
+            contract(85, 1.0, 1.4, symbol="GOOD_PUT"),
+        ],
+        "calls": [],
+    }
+    p = FakeProvider(expirations={"AAA": (exp(30),)}, chains={("AAA", exp(30)): chain})
+    resp = run_screener(base_params(option_type="put", strategy="long"), provider=p, today=TODAY)
+    assert [r.contract_symbol for r in resp.results] == ["GOOD_PUT"]
 
 
 def test_invalid_risk_free_rate_env(monkeypatch):

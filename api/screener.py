@@ -9,6 +9,8 @@ import sys
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import parse_qs, urlparse
 
+# Permite `import _models` etc. tanto en Vercel como localmente;
+# los noqa: E402 de abajo existen por esta línea.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from _models import ScreenerParams  # noqa: E402
@@ -64,5 +66,5 @@ class handler(BaseHTTPRequestHandler):
             except Exception:
                 logger.exception("No se pudo responder 500")
 
-    def log_message(self, format: str, *args) -> None:  # noqa: A002
+    def log_message(self, format: str, *args) -> None:
         logger.debug("%s - %s", self.address_string(), format % args)

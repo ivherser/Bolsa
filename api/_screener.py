@@ -7,6 +7,7 @@ import logging
 import math
 import os
 import time
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, date, datetime
 from typing import Protocol
@@ -14,7 +15,13 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import _data
 from _greeks import bs_greeks, prob_above, year_fraction
-from _models import OptionResult, ScreenerMeta, ScreenerParams, ScreenerResponse
+from _models import (
+    OptionResult,
+    ScreenerMeta,
+    ScreenerParams,
+    ScreenerResponse,
+    SortField,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +68,7 @@ def run_screener(
     deadline_s: float | None = None,
 ) -> ScreenerResponse:
     if provider is None:
-        provider = _data  # type: ignore[assignment]
+        provider = _data
     r = _env_float("RISK_FREE_RATE", 0.045, 0.0, 0.2)
     if deadline_s is None:
         deadline_s = _env_float("SCREENER_DEADLINE_SECONDS", 8.0, 0.1, 60.0)
@@ -114,37 +121,37 @@ def run_screener(
             per_ticker_exp[t] = in_window[: params.max_expirations]
             expirations_scanned += len(per_ticker_exp[t])
 
-        # Fase 2: cadenas de opciones.
+        # Fase 2: cadenas de opciones, sobre el mismo executor para que el
+        # shutdown(wait=False) del finally no bloquee esperando a rezagadas.
         chain_futs: dict[tuple[str, str], concurrent.futures.Future] = {}
-        with ThreadPoolExecutor(max_workers=5) as chain_executor:
-            for t, exps in per_ticker_exp.items():
-                for exp_str, _, _ in exps:
-                    chain_futs[(t, exp_str)] = chain_executor.submit(provider.get_chain, t, exp_str)
-            remaining = deadline_s - (time.monotonic() - start)
-            if remaining <= 0:
-                done, not_done = set(), set(chain_futs.values())
-            else:
-                done, not_done = concurrent.futures.wait(chain_futs.values(), timeout=remaining)
-            for fut in not_done:
-                fut.cancel()
-            if not_done:
-                truncated = True
-                warnings.append(
-                    "Tiempo límite alcanzado: resultados parciales "
-                    f"({len(not_done)} cadenas sin procesar)"
-                )
-            chains: dict[tuple[str, str], dict] = {}
-            for key, fut in chain_futs.items():
-                if fut in not_done:
-                    continue
-                t, exp_str = key
-                try:
-                    chain, hit = fut.result()
-                    cache_hits += 1 if hit else 0
-                    chains[key] = chain
-                except Exception:
-                    logger.exception("Error obteniendo cadena %s %s", t, exp_str)
-                    warnings.append(f"{t} {exp_str}: cadena no disponible")
+        for t, exps in per_ticker_exp.items():
+            for exp_str, _, _ in exps:
+                chain_futs[(t, exp_str)] = executor.submit(provider.get_chain, t, exp_str)
+        remaining = deadline_s - (time.monotonic() - start)
+        if remaining <= 0:
+            done, not_done = set(), set(chain_futs.values())
+        else:
+            done, not_done = concurrent.futures.wait(chain_futs.values(), timeout=remaining)
+        for fut in not_done:
+            fut.cancel()
+        if not_done:
+            truncated = True
+            warnings.append(
+                "Tiempo límite alcanzado: resultados parciales "
+                f"({len(not_done)} cadenas sin procesar)"
+            )
+        chains: dict[tuple[str, str], dict] = {}
+        for key, fut in chain_futs.items():
+            if fut in not_done:
+                continue
+            t, exp_str = key
+            try:
+                chain, hit = fut.result()
+                cache_hits += 1 if hit else 0
+                chains[key] = chain
+            except Exception:
+                logger.exception("Error obteniendo cadena %s %s", t, exp_str)
+                warnings.append(f"{t} {exp_str}: cadena no disponible")
 
         # Fase 3: evaluar contratos.
         option_types = ("put", "call") if params.option_type == "both" else (params.option_type,)
@@ -159,9 +166,17 @@ def run_screener(
                     leg_key = "puts" if otype == "put" else "calls"
                     contracts = chain.get(leg_key, [])
                     for c in contracts:
-                        res = _evaluate_contract(
-                            c, contracts, params, otype, spot, t, exp_str, dte, T, r
-                        )
+                        try:
+                            res = _evaluate_contract(
+                                c, contracts, params, otype, spot, t, exp_str, dte, T, r
+                            )
+                        except ValueError:
+                            logger.debug(
+                                "Contrato omitido por datos inválidos: %s %s",
+                                t,
+                                c.get("contractSymbol"),
+                            )
+                            continue
                         if res is not None:
                             results.append(res)
     finally:
@@ -190,12 +205,25 @@ def run_screener(
     )
 
 
+_SORT_ACCESSORS: dict[SortField, Callable[[OptionResult], float | str | None]] = {
+    "ror_day": lambda o: o.ror_day,
+    "ror": lambda o: o.ror,
+    "pop": lambda o: o.pop,
+    "iv": lambda o: o.iv,
+    "delta": lambda o: abs(o.greeks.delta),
+    "oi": lambda o: o.open_interest,
+    "volume": lambda o: o.volume,
+    "dte": lambda o: o.dte,
+    "strike": lambda o: o.strike,
+    "spread_pct": lambda o: o.spread_pct,
+    "mid": lambda o: o.mid,
+    "expiration": lambda o: o.expiration,
+    "ticker": lambda o: o.ticker,
+}
+
+
 def _sort_val(opt: OptionResult, sort_by: str):
-    if sort_by == "delta":
-        return abs(opt.greeks.delta)
-    if sort_by == "oi":
-        return opt.open_interest
-    return getattr(opt, sort_by)
+    return _SORT_ACCESSORS[sort_by](opt)
 
 
 def _sort_key(opt: OptionResult, sort_by: str):
@@ -284,12 +312,18 @@ def _evaluate_contract(
         if otype == "call":
             breakeven = K + premium
             max_profit = None
-            pop = prob_above(spot, breakeven, T, r, iv)
         else:
             breakeven = K - premium
             max_profit = (K - premium) * 100
-            pop = 1.0 - prob_above(spot, breakeven, T, r, iv)
         max_loss = premium * 100
+
+    if breakeven <= 0:
+        return None
+    if params.strategy == "long":
+        if otype == "call":
+            pop = prob_above(spot, breakeven, T, r, iv)
+        else:
+            pop = 1.0 - prob_above(spot, breakeven, T, r, iv)
 
     if not (params.delta_min <= abs(greeks.delta) <= params.delta_max):
         return None

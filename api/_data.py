@@ -77,24 +77,37 @@ _CHAIN_COLUMNS = (
 )
 
 
+def _num(v) -> float:
+    return 0.0 if v is None or pd.isna(v) else float(v)
+
+
+def _int(v) -> int:
+    return 0 if v is None or pd.isna(v) else int(v)
+
+
 def _df_to_records(df: pd.DataFrame) -> list[dict]:
-    records: list[dict] = []
-    for row in df.itertuples(index=False):
-        rec = {}
-        for col in _CHAIN_COLUMNS:
-            val = getattr(row, col, None)
-            if col in ("volume", "openInterest"):
-                rec[col] = 0 if val is None or pd.isna(val) else int(val)
-            elif col in ("bid", "ask", "lastPrice"):
-                rec[col] = 0.0 if val is None or pd.isna(val) else float(val)
-            elif col == "impliedVolatility":
-                rec[col] = float("nan") if val is None else float(val)
-            elif col == "contractSymbol":
-                rec[col] = "" if val is None else str(val)
-            else:
-                rec[col] = float(val)
-        records.append(rec)
-    return records
+    records = df.reindex(columns=list(_CHAIN_COLUMNS)).to_dict("records")
+    return [
+        {
+            "contractSymbol": (
+                ""
+                if rec["contractSymbol"] is None or pd.isna(rec["contractSymbol"])
+                else str(rec["contractSymbol"])
+            ),
+            "strike": float(rec["strike"]),
+            "bid": _num(rec["bid"]),
+            "ask": _num(rec["ask"]),
+            "lastPrice": _num(rec["lastPrice"]),
+            "volume": _int(rec["volume"]),
+            "openInterest": _int(rec["openInterest"]),
+            "impliedVolatility": (
+                float("nan")
+                if rec["impliedVolatility"] is None
+                else float(rec["impliedVolatility"])
+            ),
+        }
+        for rec in records
+    ]
 
 
 def get_chain(ticker: str, expiration: str) -> tuple[dict, bool]:
