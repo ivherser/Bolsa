@@ -2,10 +2,12 @@
 
 Aplicación web para filtrar cadenas de opciones de Yahoo Finance: cash-secured puts, credit spreads y opciones long, con griegas calculadas (Black-Scholes), POP lognormal y rentabilidad sobre riesgo.
 
-Proyecto único desplegable en Vercel:
+Proyecto único desplegable en Vercel (free tier), con usuarios y persistencia en Supabase:
 
-- `frontend/` — React 19 + Vite + TypeScript estricto (UI en español).
+- `frontend/` — React 19 + Vite + TypeScript estricto (UI en español). Login email+contraseña con `@supabase/supabase-js`; el screener solo es accesible con sesión iniciada.
 - `api/screener.py` — función serverless Python (`GET /api/screener`) con helpers `api/_*.py` (no se exponen como endpoints por empezar con `_`).
+- `supabase/schema.sql` — tablas `watchlist`, `presets` y `notes` con Row Level Security (`user_id = auth.uid()`). El frontend lee/escribe directamente en Supabase con la anon key; la API Python no toca Supabase.
+- `docs/` — documentación de usuario en Markdown, renderizada en la ruta `/docs` con `react-markdown`.
 
 ## Estructura
 
@@ -17,6 +19,13 @@ api/
   _data.py        # yfinance + caché en memoria (TTL 15 min)
   _screener.py    # métricas de estrategia, filtros, ordenación, deadline
 frontend/         # app React + Vite
+  src/supabase.ts # cliente Supabase (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY)
+  src/db.ts       # CRUD watchlist / presets / notes (filtrado por user_id)
+  src/Root.tsx    # enrutado mínimo (/ y /docs) y control de sesión
+docs/             # markdown servido en /docs
+supabase/
+  schema.sql      # pegar en Supabase > SQL Editor
+  tests/          # stub de auth + test de RLS (Postgres vanilla, en CI)
 scripts/dev_api.py# servidor local stdlib (sustituye a un uvicorn separado)
 tests/            # pytest
 vercel.json       # build del frontend + configuración de la función
@@ -49,7 +58,9 @@ Parámetros desconocidos → `400 {"error":"Parámetros inválidos","details":[�
 
 `GET /api/status` comprueba si Yahoo responde (options de SPY, con memo de 60 s y timeout de 5 s) y devuelve `{"source": "yahoo", "connected": true, "latency_ms": 120, "checked_at": "2025-01-01T00:00:00Z"}`. El indicador del encabezado ("Yahoo Finance" con punto verde/rojo/ámbar) lo usa para mostrar la fuente y el estado de conexión; es clicable para re-comprobar.
 
-Los tickers, el preset y los filtros se guardan en el navegador (localStorage, clave `bolsa:state:v1`) y se restauran al recargar; el botón «Restablecer» los limpia.
+Los tickers, el preset y los filtros en curso se guardan en el navegador (localStorage, clave `bolsa:state:v1`) y se restauran al recargar; el botón «Restablecer» los limpia.
+
+La watchlist, los presets con nombre («Mis presets») y el diario de notas se guardan por usuario en Supabase (tablas `watchlist`, `presets.filtros` jsonb y `notes.contenido`), sin pasar por la API Python.
 
 ### Respuesta
 
@@ -66,6 +77,28 @@ Cada `OptionResult` incluye: contrato, tipo, estrategia, expiración, DTE, spot,
 - **RoR** = max_profit/max_loss×100; **RoR/día** = RoR/DTE.
 - **Griegas**: Black-Scholes sin dividendos, T = max(DTE,1)/365, r = `RISK_FREE_RATE`, sigma = IV de Yahoo. Theta por día natural; vega por punto de volatilidad.
 
+## Supabase
+
+1. En el proyecto de Supabase abrir **SQL Editor**, pegar el contenido de `supabase/schema.sql` y ejecutarlo (es idempotente: se puede re-ejecutar).
+2. **Authentication → Providers → Email**: activado (por defecto). Opcional: desactivar «Confirm email» para entrar sin confirmar.
+3. **Authentication → URL Configuration**:
+   - *Site URL*: la URL de producción de Vercel (p. ej. `https://bolsa.vercel.app`).
+   - *Redirect URLs*: añadir `https://*.vercel.app/**` (previews) y `http://localhost:5173/**` (desarrollo).
+4. Obtener la **anon / publishable key** en *Project Settings → API*. Nunca usar la `service_role` key en el frontend.
+
+### Variables de entorno
+
+Ver `.env.example`.
+
+| Variable | Dónde | Defecto |
+|---|---|---|
+| `VITE_SUPABASE_URL` | Frontend (build) | `https://frcspjmrbfyuievdzynv.supabase.co` |
+| `VITE_SUPABASE_ANON_KEY` | Frontend (build) | — (**obligatoria**; sin ella la app muestra «Configuración incompleta») |
+| `RISK_FREE_RATE` | API | `0.045` |
+| `SCREENER_DEADLINE_SECONDS` | API | `8` |
+
+La anon key no se incluye en el repositorio (política de no versionar claves; además gitleaks la detectaría como JWT). Aunque es pública por diseño en Supabase, la seguridad de los datos depende de RLS, no de ocultarla.
+
 ## Desarrollo local
 
 Requisitos: Python 3.12 y Node ≥20.
@@ -79,6 +112,7 @@ uv venv -p 3.12 .venv && uv pip install -r requirements-dev.txt
 **Opción B — dos procesos:**
 
 ```bash
+cp .env.example frontend/.env.local  # y rellenar VITE_SUPABASE_ANON_KEY
 python scripts/dev_api.py            # API en http://127.0.0.1:8000
 cd frontend && npm ci && npm run dev # Vite en :5173, proxifica /api → :8000
 ```
@@ -91,13 +125,24 @@ ruff check . && ruff format --check .
 cd frontend && npm run typecheck && npm run build
 ```
 
-CI (`.github/workflows/ci.yml`, en PRs y pushes a `main`): ruff + pytest + pip-audit, typecheck + build + npm audit del frontend, y escaneo de secretos con gitleaks.
+Test de RLS del esquema (requiere Docker):
+
+```bash
+docker run -d --name pg -e POSTGRES_HOST_AUTH_METHOD=trust postgres:16-alpine && sleep 5
+for f in supabase/tests/stub_auth.sql supabase/schema.sql supabase/tests/rls_test.sql; do
+  docker exec -i pg psql -v ON_ERROR_STOP=1 -U postgres < "$f"
+done
+```
+
+CI (`.github/workflows/ci.yml`, en PRs y pushes a `main`): ruff + pytest + pip-audit, typecheck + build + npm audit del frontend, aplicación de `schema.sql` + test de RLS sobre Postgres, y escaneo de secretos con gitleaks.
 
 ## Despliegue
 
-Importar el repo en Vercel (preset «Other»; `vercel.json` fija build/output). No hacen falta variables de entorno. Cada push a `main` despliega frontend + API. Variables opcionales: `RISK_FREE_RATE` (defecto 0.045, válido [0, 0.2]) y `SCREENER_DEADLINE_SECONDS` (defecto 8, válido [0.1, 60]).
+Importar el repo en Vercel (preset «Other»; `vercel.json` fija build/output y reescribe las rutas no-`/api` a `index.html` para que `/docs` funcione). Definir `VITE_SUPABASE_ANON_KEY` en *Settings → Environment Variables* (Production y Preview) antes del primer build. Cada push a `main` despliega frontend + API. Variables opcionales: `RISK_FREE_RATE` (defecto 0.045, válido [0, 0.2]) y `SCREENER_DEADLINE_SECONDS` (defecto 8, válido [0.1, 60]).
 
 ## Limitaciones
+
+- Persistencia y login dependen del plan gratuito de Supabase (proyectos inactivos se pausan tras ~1 semana; límites de emails de confirmación por hora).
 
 - Datos de Yahoo Finance con retraso ~15 min y API no oficial: posible rate-limiting/429 y bloqueo de IPs de datacenter.
 - Griegas calculadas (no de mercado); sin dividendos.

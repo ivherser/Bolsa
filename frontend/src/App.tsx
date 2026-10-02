@@ -2,16 +2,26 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchScreener } from "./api";
 import DetailPanel from "./components/DetailPanel";
 import FilterPanel from "./components/FilterPanel";
+import Notes from "./components/Notes";
 import PresetBar from "./components/PresetBar";
 import ResultsTable from "./components/ResultsTable";
+import SavedPresets from "./components/SavedPresets";
 import SourceStatus from "./components/SourceStatus";
 import TickerChips from "./components/TickerChips";
 import TickerOverview from "./components/TickerOverview";
+import Watchlist from "./components/Watchlist";
 import { PRESETS } from "./presets";
 import { clearState, defaultState, loadState, saveState } from "./storage";
 import type { Filters, OptionResult } from "./types";
 
-export default function App() {
+interface Props {
+  userId: string;
+  userEmail: string;
+  onNavigate: (path: string) => void;
+  onLogout: () => void;
+}
+
+export default function App({ userId, userEmail, onNavigate, onLogout }: Props) {
   const [persisted] = useState(loadState);
   const [tickers, setTickers] = useState<string[]>(persisted.tickers);
   const [presetId, setPresetId] = useState<string>(persisted.presetId);
@@ -80,12 +90,33 @@ export default function App() {
     <div className="app">
       <header>
         <h1>Bolsa — Screener de opciones</h1>
-        <SourceStatus refreshKey={searchErrorKey} lastSearchOk={lastSearchOk} />
+        <div className="header-right">
+          <SourceStatus refreshKey={searchErrorKey} lastSearchOk={lastSearchOk} />
+          <nav className="topnav">
+            <a
+              href="/docs"
+              onClick={(e) => {
+                e.preventDefault();
+                onNavigate("/docs");
+              }}
+            >
+              Docs
+            </a>
+            <span className="user-email" title={userEmail}>
+              {userEmail}
+            </span>
+            <button type="button" className="secondary" onClick={onLogout}>
+              Salir
+            </button>
+          </nav>
+        </div>
       </header>
       <div className="layout">
         <aside className="sidebar">
           <PresetBar activeId={presetId} onSelect={applyPreset} onReset={resetAll} />
+          <SavedPresets userId={userId} filters={filters} onApply={changeFilters} />
           <TickerChips tickers={tickers} onChange={setTickers} />
+          <Watchlist userId={userId} tickers={tickers} onLoad={setTickers} />
           <FilterPanel
             filters={filters}
             onChange={changeFilters}
@@ -111,6 +142,7 @@ export default function App() {
             selected={selected}
             onSelect={setSelected}
           />
+          <Notes userId={userId} suggestedTicker={selected?.ticker ?? null} />
         </main>
         {selected && <DetailPanel result={selected} onClose={() => setSelected(null)} />}
       </div>

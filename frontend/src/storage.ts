@@ -2,8 +2,8 @@ import { DEFAULT_PRESET_ID, DEFAULT_TICKERS, PRESETS } from "./presets";
 import type { Filters } from "./types";
 
 const KEY = "bolsa:state:v1";
-const TICKER_RE = /^\^?[A-Z0-9][A-Z0-9.\-]{0,9}$/;
-const MAX_TICKERS = 10;
+export const TICKER_RE = /^\^?[A-Z0-9][A-Z0-9.\-]{0,9}$/;
+export const MAX_TICKERS = 10;
 
 export interface PersistedState {
   tickers: string[];
@@ -42,7 +42,7 @@ const ENUM_RULES: Partial<Record<keyof Filters, readonly unknown[]>> = {
   sort_order: ["asc", "desc"],
 };
 
-function cleanFilters(raw: unknown, defaults: Filters): Filters {
+export function cleanFilters(raw: unknown, defaults: Filters): Filters {
   const out = { ...defaults };
   if (typeof raw !== "object" || raw === null) return out;
   for (const key of Object.keys(defaults) as (keyof Filters)[]) {

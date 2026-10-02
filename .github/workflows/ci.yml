@@ -49,3 +49,26 @@ jobs:
       - uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2.3.9
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  supabase-schema:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGHOST: localhost
+      PGUSER: postgres
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Apply schema (twice, idempotency) and verify RLS
+        run: |
+          psql -v ON_ERROR_STOP=1 -f supabase/tests/stub_auth.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/schema.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/schema.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/tests/rls_test.sql

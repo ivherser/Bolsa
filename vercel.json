@@ -8,15 +8,21 @@
   "functions": {
     "api/screener.py": {
       "maxDuration": 10,
-      "excludeFiles": "{frontend/**,tests/**,scripts/**,**/node_modules/**,**/__pycache__/**,**/.pytest_cache/**}"
+      "excludeFiles": "{frontend/**,tests/**,scripts/**,docs/**,supabase/**,**/node_modules/**,**/__pycache__/**,**/.pytest_cache/**}"
     },
     "api/status.py": {
       "maxDuration": 10,
-      "excludeFiles": "{frontend/**,tests/**,scripts/**,**/node_modules/**,**/__pycache__/**,**/.pytest_cache/**}"
+      "excludeFiles": "{frontend/**,tests/**,scripts/**,docs/**,supabase/**,**/node_modules/**,**/__pycache__/**,**/.pytest_cache/**}"
     },
     "api/overview.py": {
       "maxDuration": 10,
-      "excludeFiles": "{frontend/**,tests/**,scripts/**,**/node_modules/**,**/__pycache__/**,**/.pytest_cache/**}"
+      "excludeFiles": "{frontend/**,tests/**,scripts/**,docs/**,supabase/**,**/node_modules/**,**/__pycache__/**,**/.pytest_cache/**}"
     }
-  }
+  },
+  "rewrites": [
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
+    }
+  ]
 }
