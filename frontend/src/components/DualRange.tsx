@@ -20,8 +20,9 @@ export default function DualRange({
   format = (v) => String(v),
 }: Props) {
   const span = max - min;
-  const loPct = ((low - min) / span) * 100;
-  const hiPct = ((high - min) / span) * 100;
+  const clamp = (v: number) => Math.min(100, Math.max(0, v));
+  const loPct = clamp(((low - min) / span) * 100);
+  const hiPct = clamp(((high - min) / span) * 100);
   return (
     <div className="field">
       <label>
@@ -41,6 +42,7 @@ export default function DualRange({
           max={max}
           step={step}
           value={low}
+          style={{ zIndex: low > min + span / 2 ? 2 : 1 }}
           onChange={(e) => onChange(Math.min(Number(e.target.value), high), high)}
         />
         <input

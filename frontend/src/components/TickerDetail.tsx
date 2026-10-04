@@ -126,10 +126,11 @@ export default function TickerDetail({ ticker, onClose, onError }: Props) {
   const spot = chain?.spot ?? 0;
   const rows = chain?.rows ?? [];
   const spotIdx = rows.findIndex((r) => r.strike >= spot);
+  const center = spotIdx === -1 ? rows.length : spotIdx;
   const around =
     showAll || rows.length <= 2 * AROUND
       ? rows
-      : rows.slice(Math.max(0, spotIdx - AROUND), spotIdx + AROUND);
+      : rows.slice(Math.max(0, center - AROUND), center + AROUND);
 
   return (
     <section className="ticker-detail">
