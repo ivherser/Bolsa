@@ -142,7 +142,7 @@ export default function TickerDetail({ ticker, onClose, onError }: Props) {
           ✕
         </button>
       </div>
-      <CandleChart ticker={ticker} onError={onError} />
+      <CandleChart ticker={ticker} expiration={expiration} onError={onError} />
       {error && <div className="state-msg neg">{error}</div>}
       {!error && chain === null && loading && <div className="state-msg">Cargando cadena…</div>}
       {chain !== null && (
