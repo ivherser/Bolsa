@@ -706,9 +706,16 @@ footer.disclaimer {
 }
 
 .hint-draw {
+  position: absolute;
+  top: 6px;
+  left: 8px;
+  z-index: 4;
   font-size: 12px;
   color: var(--accent);
-  margin-bottom: 6px;
+  background: rgba(23, 30, 46, 0.85);
+  padding: 1px 6px;
+  border-radius: 3px;
+  pointer-events: none;
 }
 
 .exp-marker {
@@ -718,6 +725,7 @@ footer.disclaimer {
   width: 0;
   border-left: 1px dashed #f5c542;
   pointer-events: none;
+  z-index: 3;
 }
 
 .exp-marker-label {

@@ -103,10 +103,12 @@ function whitespaceTimes(
 export default function CandleChart({
   ticker,
   expiration,
+  expirationDte,
   onError,
 }: {
   ticker: string;
   expiration: string | null;
+  expirationDte: number | null;
   onError: () => void;
 }) {
   const [interval, setInterval] = useState<HistoryInterval>("1d");
@@ -114,7 +116,11 @@ export default function CandleChart({
   const [drawMode, setDrawMode] = useState(false);
   const [awaitingSecond, setAwaitingSecond] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [marker, setMarker] = useState<{ x: number; label: string } | null>(null);
+  const [marker, setMarker] = useState<{
+    x: number;
+    label: string;
+    flip: boolean;
+  } | null>(null);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -127,7 +133,6 @@ export default function CandleChart({
   const drawingsRef = useRef<DrawnLine[]>([]);
   const pendingRef = useRef<{ t: number; p: number } | null>(null);
   const expTargetRef = useRef<number | null>(null);
-  const fitDoneRef = useRef(false);
   const [ready, setReady] = useState(0);
   const errRef = useRef(onError);
   errRef.current = onError;
@@ -196,7 +201,6 @@ export default function CandleChart({
     setAwaitingSecond(false);
     setMarker(null);
     expTargetRef.current = null;
-    fitDoneRef.current = false;
 
     fetchHistory(ticker, interval, ctrl.signal)
       .then((resp) => {
@@ -310,7 +314,7 @@ export default function CandleChart({
       const s = chart.addSeries(
         LineSeries,
         {
-          color: "#f5c542",
+          color: "#38bdf8",
           lineWidth: 2,
           lastValueVisible: false,
           priceLineVisible: false,
@@ -335,7 +339,6 @@ export default function CandleChart({
         axisLabelVisible: true,
       });
       rsiRefs.current = [s];
-      chart.panes()[paneIdx]?.setHeight(SUBPANE_H);
       paneIdx += 1;
     }
     if (prefs.macd) {
@@ -355,7 +358,7 @@ export default function CandleChart({
       const sline = chart.addSeries(
         LineSeries,
         {
-          color: "#f5c542",
+          color: "#fb923c",
           lineWidth: 1,
           lastValueVisible: false,
           priceLineVisible: false,
@@ -380,7 +383,9 @@ export default function CandleChart({
         })),
       );
       macdRefs.current = [mline, sline, h as unknown as ISeriesApi<"Line">];
-      chart.panes()[paneIdx]?.setHeight(SUBPANE_H);
+    }
+    for (const pane of chart.panes().slice(1)) {
+      pane.setHeight(SUBPANE_H);
     }
   }, [prefs.rsi, prefs.macd, ready]);
 
@@ -464,10 +469,7 @@ export default function CandleChart({
       ...all.filter((t) => new Date(t * 1000).toISOString().slice(0, 10) <= expUtc),
     );
     expTargetRef.current = Number.isFinite(target) ? target : null;
-    if (!fitDoneRef.current) {
-      chart.timeScale().fitContent();
-      fitDoneRef.current = true;
-    }
+    chart.timeScale().fitContent();
     const updateMarker = () => {
       const tgt = expTargetRef.current;
       if (tgt === null) {
@@ -475,15 +477,14 @@ export default function CandleChart({
         return;
       }
       const x = chart.timeScale().timeToCoordinate(tgt as UT);
-      if (x === null) {
+      const plotW = chart.timeScale().width();
+      if (x === null || x > plotW) {
         setMarker(null);
         return;
       }
-      const dte = Math.max(
-        0,
-        Math.round((Date.parse(`${expiration}T00:00:00Z`) - Date.now()) / 86400e3),
-      );
-      setMarker({ x, label: `${expiration} (${dte}d)` });
+      const label =
+        expirationDte !== null ? `${expiration} (${expirationDte}d)` : expiration;
+      setMarker({ x, label, flip: x > plotW - 120 });
     };
     updateMarker();
     const ts = chart.timeScale();
@@ -494,7 +495,7 @@ export default function CandleChart({
       ts.unsubscribeVisibleLogicalRangeChange(updateMarker);
       ro.disconnect();
     };
-  }, [expiration, ready, interval]);
+  }, [expiration, expirationDte, ready, interval]);
 
   const clearLines = () => {
     lineSeriesRefs.current.forEach(removeSeries);
@@ -564,16 +565,21 @@ export default function CandleChart({
           </button>
         </div>
       </div>
-      {awaitingSecond && <div className="hint-draw">Elige el segundo punto</div>}
       {error && <div className="state-msg neg">{error}</div>}
       <div
         ref={containerRef}
         className="chart-container"
         style={{ height: chartH, cursor: drawMode ? "crosshair" : undefined, position: "relative" }}
       >
+        {awaitingSecond && <div className="hint-draw">Elige el segundo punto</div>}
         {marker && (
           <div className="exp-marker" style={{ left: marker.x }}>
-            <span className="exp-marker-label">{marker.label}</span>
+            <span
+              className="exp-marker-label"
+              style={marker.flip ? { right: 4, left: "auto" } : undefined}
+            >
+              {marker.label}
+            </span>
           </div>
         )}
       </div>
