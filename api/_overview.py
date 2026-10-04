@@ -32,6 +32,53 @@ class OverviewProvider(Protocol):
 
     def get_chain(self, ticker: str, expiration: str) -> tuple[dict, bool]: ...
 
+    def get_daily_history(self, ticker: str) -> tuple[list[dict], bool]: ...
+
+
+def _log_returns(closes: list[float]) -> list[float]:
+    return [math.log(b / a) for a, b in zip(closes, closes[1:], strict=False) if a > 0 and b > 0]
+
+
+def hv_from_closes(closes: list[float], window: int = 30) -> float | None:
+    """Volatilidad realizada anualizada (%) de los últimos `window` retornos log."""
+    rets = _log_returns(closes)
+    if len(rets) < window:
+        return None
+    sample = rets[-window:]
+    mean = sum(sample) / len(sample)
+    var = sum((x - mean) ** 2 for x in sample) / (len(sample) - 1)
+    return round(math.sqrt(var * 252) * 100.0, 2)
+
+
+def hv_percentile(closes: list[float], window: int = 30, lookback: int = 252) -> float | None:
+    """Percentil del HV actual dentro de la serie rolling de HV (últimos `lookback`)."""
+    rets = _log_returns(closes)
+    series = []
+    for i in range(window, len(rets) + 1):
+        sample = rets[i - window : i]
+        mean = sum(sample) / len(sample)
+        var = sum((x - mean) ** 2 for x in sample) / (len(sample) - 1)
+        series.append(math.sqrt(var * 252) * 100.0)
+    values = series[-lookback:]
+    if len(values) < 20:
+        return None
+    current = values[-1]
+    pct = sum(1 for v in values if v <= current) / len(values) * 100.0
+    return round(pct)
+
+
+def range_position(
+    spot: float, highs: list[float], lows: list[float]
+) -> tuple[float, float, float] | None:
+    """(posición %, máx, mín) del spot dentro del rango de 52 semanas."""
+    if not highs or not lows:
+        return None
+    hi, lo = max(highs), min(lows)
+    if hi == lo:
+        return None
+    pct = min(100.0, max(0.0, (spot - lo) / (hi - lo) * 100.0))
+    return round(pct, 1), round(hi, 2), round(lo, 2)
+
 
 def _atm_leg(contract: dict, spot: float, T: float, r: float, otype: str) -> AtmLeg | None:
     bid, ask, last, iv = (
@@ -84,6 +131,33 @@ def _overview_item(
         "change_pct": change_pct,
         "volume": quote["volume"],
     }
+
+    hv30 = None
+    range52w_pct = None
+    high_52w = None
+    low_52w = None
+    hv_pct = None
+    try:
+        history, _ = provider.get_daily_history(ticker)
+        closes = [r["close"] for r in history if r["close"] is not None]
+        highs = [r["high"] for r in history[-252:] if r["high"] is not None]
+        lows = [r["low"] for r in history[-252:] if r["low"] is not None]
+        hv30 = hv_from_closes(closes)
+        pos = range_position(spot, highs, lows)
+        if pos is not None:
+            range52w_pct, high_52w, low_52w = pos
+        hv_pct = hv_percentile(closes)
+    except Exception:
+        logger.info("Histórico no disponible para %s", ticker)
+    base.update(
+        {
+            "hv30": hv30,
+            "range52w_pct": range52w_pct,
+            "high_52w": high_52w,
+            "low_52w": low_52w,
+            "hv_percentile_52w": hv_pct,
+        }
+    )
 
     expirations, _ = provider.get_expirations(ticker)
     if not expirations:

@@ -42,6 +42,8 @@ interface Props {
   onDteChange: (dte: number) => void;
   onLoadOk: () => void;
   onLoadError: () => void;
+  selected: string | null;
+  onSelect: (ticker: string | null) => void;
 }
 
 export default function TickerOverview({
@@ -50,6 +52,8 @@ export default function TickerOverview({
   onDteChange,
   onLoadOk,
   onLoadError,
+  selected,
+  onSelect,
 }: Props) {
   const [items, setItems] = useState<TickerOverviewItem[] | null>(null);
   const [dteDraft, setDteDraft] = useState(String(dte));
@@ -156,9 +160,21 @@ export default function TickerOverview({
                 <th rowSpan={2}>Precio</th>
                 <th rowSpan={2}>Var.</th>
                 <th rowSpan={2}>Volumen</th>
+                <th rowSpan={2} title="Volatilidad histórica 30d anualizada">
+                  VH 30d
+                </th>
+                <th rowSpan={2} title="Posición del precio dentro del rango de 52 semanas">
+                  Pos. 52s
+                </th>
+                <th
+                  rowSpan={2}
+                  title="Percentil de la volatilidad histórica 30d frente al último año"
+                >
+                  Pct. VH 52s
+                </th>
                 <th rowSpan={2}>Exp. (DTE)</th>
                 <th rowSpan={2}>Strike ATM</th>
-                <th rowSpan={2}>IV ATM</th>
+                <th rowSpan={2}>VI ATM</th>
                 <th colSpan={4} className="greek-group">
                   Call
                 </th>
@@ -179,7 +195,15 @@ export default function TickerOverview({
             </thead>
             <tbody>
               {items.map((it) => (
-                <tr key={it.ticker}>
+                <tr
+                  key={it.ticker}
+                  className={selected === it.ticker ? "selected overview-row" : "overview-row"}
+                  tabIndex={0}
+                  onClick={() => onSelect(selected === it.ticker ? null : it.ticker)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") onSelect(selected === it.ticker ? null : it.ticker);
+                  }}
+                >
                   <td>{it.ticker}</td>
                   <td>{it.spot > 0 ? nf.format(it.spot) : "—"}</td>
                   <td className={it.change === null ? "" : it.change >= 0 ? "pos" : "neg"}>
@@ -191,12 +215,35 @@ export default function TickerOverview({
                           : "")}
                   </td>
                   <td>{compactVolume(it.volume)}</td>
+                  <td>{it.hv30 !== null ? `${nf.format(it.hv30)}%` : "—"}</td>
+                  <td
+                    title={
+                      it.high_52w !== null && it.low_52w !== null
+                        ? `Mín 52s ${nf.format(it.low_52w)} – Máx 52s ${nf.format(it.high_52w)}`
+                        : undefined
+                    }
+                  >
+                    {it.range52w_pct !== null ? `${nf.format(it.range52w_pct)}%` : "—"}
+                  </td>
+                  <td title="Percentil de la volatilidad histórica 30d frente al último año">
+                    {it.hv_percentile_52w !== null ? nf.format(it.hv_percentile_52w) : "—"}
+                  </td>
                   <td>
                     {it.expiration ?? "—"}
                     {it.dte !== null ? ` (${it.dte})` : ""}
                   </td>
                   <td>{it.atm_strike !== null ? nf.format(it.atm_strike) : "—"}</td>
-                  <td>{it.atm_iv !== null ? `${nf.format(it.atm_iv)}%` : "—"}</td>
+                  <td
+                    className={
+                      it.atm_iv !== null && it.hv30 !== null
+                        ? it.atm_iv > it.hv30
+                          ? "pos"
+                          : "neg"
+                        : ""
+                    }
+                  >
+                    {it.atm_iv !== null ? `${nf.format(it.atm_iv)}%` : "—"}
+                  </td>
                   {it.error ? (
                     <td colSpan={8} className="overview-error">
                       {it.error}

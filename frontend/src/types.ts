@@ -98,6 +98,11 @@ export interface TickerOverviewItem {
   dte: number | null;
   atm_strike: number | null;
   atm_iv: number | null;
+  hv30: number | null;
+  range52w_pct: number | null;
+  high_52w: number | null;
+  low_52w: number | null;
+  hv_percentile_52w: number | null;
   call: AtmLeg | null;
   put: AtmLeg | null;
   error: string | null;
@@ -113,6 +118,63 @@ export interface OverviewMeta {
 export interface OverviewResponse {
   items: TickerOverviewItem[];
   meta: OverviewMeta;
+}
+
+export interface ChainLeg {
+  contract_symbol: string;
+  bid: number;
+  ask: number;
+  mid: number;
+  last: number;
+  volume: number;
+  open_interest: number;
+  iv: number | null;
+  greeks: Greeks | null;
+  pop_short: number | null;
+  itm_prob: number | null;
+}
+
+export interface ChainRow {
+  strike: number;
+  call: ChainLeg | null;
+  put: ChainLeg | null;
+}
+
+export interface ChainExpiration {
+  date: string;
+  dte: number;
+}
+
+export interface ChainMeta {
+  risk_free_rate: number;
+  generated_at: string;
+}
+
+export interface ChainResponse {
+  ticker: string;
+  spot: number;
+  expirations: ChainExpiration[];
+  expiration: string | null;
+  dte: number | null;
+  rows: ChainRow[];
+  meta: ChainMeta;
+}
+
+export type HistoryInterval = "1h" | "1d" | "1wk";
+
+export interface Candle {
+  time: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+export interface HistoryResponse {
+  ticker: string;
+  interval: HistoryInterval;
+  candles: Candle[];
 }
 
 export interface Filters {

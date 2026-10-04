@@ -179,6 +179,63 @@ def check_yahoo(timeout_s: float = 5.0) -> tuple[bool, int | None]:
     return result
 
 
+def get_daily_history(ticker: str) -> tuple[list[dict], bool]:
+    """Histórico diario de 2 años: lista de dicts con date/open/high/low/close."""
+
+    def fetch() -> list[dict]:
+        df = yf.Ticker(ticker).history(period="2y", interval="1d", auto_adjust=False)
+        records = []
+        for ts, row in df.iterrows():
+            records.append(
+                {
+                    "date": ts.date(),
+                    "open": row["Open"],
+                    "high": row["High"],
+                    "low": row["Low"],
+                    "close": row["Close"],
+                    "volume": row["Volume"],
+                }
+            )
+        return records
+
+    return _cached(("daily_history", ticker), fetch)
+
+
+_HISTORY_PERIODS = {"1h": "60d", "1d": "1y", "1wk": "5y"}
+_HISTORY_TTL = {"1h": 300, "1d": CACHE_TTL_SECONDS, "1wk": CACHE_TTL_SECONDS}
+
+
+def get_history(ticker: str, interval: str) -> tuple[list[dict], bool]:
+    """Velas OHLCV: [{time, open, high, low, close, volume}]."""
+
+    def fetch() -> list[dict]:
+        df = yf.Ticker(ticker).history(
+            period=_HISTORY_PERIODS[interval], interval=interval, auto_adjust=False
+        )
+        candles = []
+        for ts, row in df.iterrows():
+            if (
+                pd.isna(row["Open"])
+                or pd.isna(row["High"])
+                or pd.isna(row["Low"])
+                or pd.isna(row["Close"])
+            ):
+                continue
+            candles.append(
+                {
+                    "time": int(ts.timestamp()),
+                    "open": round(float(row["Open"]), 4),
+                    "high": round(float(row["High"]), 4),
+                    "low": round(float(row["Low"]), 4),
+                    "close": round(float(row["Close"]), 4),
+                    "volume": int(row["Volume"]) if not pd.isna(row["Volume"]) else 0,
+                }
+            )
+        return candles
+
+    return _cached(("history", ticker, interval), fetch, ttl=_HISTORY_TTL[interval])
+
+
 def get_chain(ticker: str, expiration: str) -> tuple[dict, bool]:
     def fetch() -> dict:
         chain = yf.Ticker(ticker).option_chain(expiration)

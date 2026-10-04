@@ -1,4 +1,5 @@
 import type { Filters, SortField } from "../types";
+import DualRange from "./DualRange";
 
 interface Props {
   filters: Filters;
@@ -92,16 +93,18 @@ export default function FilterPanel({ filters, onChange, onSearch, loading, canS
           onChange={(v) => set("spread_width", v)}
         />
       )}
+      <DualRange
+        label="DTE"
+        min={0}
+        max={365}
+        step={1}
+        low={filters.dte_min}
+        high={filters.dte_max}
+        onChange={(lo, hi) => onChange({ ...filters, dte_min: lo, dte_max: hi })}
+      />
       <div className="field-row">
         <div className="field">
-          <label>DTE mín: {filters.dte_min}</label>
-          <input
-            type="range"
-            min={0}
-            max={365}
-            value={filters.dte_min}
-            onChange={(e) => set("dte_min", Number(e.target.value))}
-          />
+          <label>DTE mín</label>
           <input
             type="number"
             min={0}
@@ -111,14 +114,7 @@ export default function FilterPanel({ filters, onChange, onSearch, loading, canS
           />
         </div>
         <div className="field">
-          <label>DTE máx: {filters.dte_max}</label>
-          <input
-            type="range"
-            min={0}
-            max={365}
-            value={filters.dte_max}
-            onChange={(e) => set("dte_max", Number(e.target.value))}
-          />
+          <label>DTE máx</label>
           <input
             type="number"
             min={0}
@@ -128,30 +124,16 @@ export default function FilterPanel({ filters, onChange, onSearch, loading, canS
           />
         </div>
       </div>
-      <div className="field-row">
-        <div className="field">
-          <label>|Delta| mín: {filters.delta_min.toFixed(2)}</label>
-          <input
-            type="range"
-            min={0}
-            max={1}
-            step={0.01}
-            value={filters.delta_min}
-            onChange={(e) => set("delta_min", Number(e.target.value))}
-          />
-        </div>
-        <div className="field">
-          <label>|Delta| máx: {filters.delta_max.toFixed(2)}</label>
-          <input
-            type="range"
-            min={0}
-            max={1}
-            step={0.01}
-            value={filters.delta_max}
-            onChange={(e) => set("delta_max", Number(e.target.value))}
-          />
-        </div>
-      </div>
+      <DualRange
+        label="|Delta|"
+        min={0}
+        max={1}
+        step={0.01}
+        low={filters.delta_min}
+        high={filters.delta_max}
+        format={(v) => v.toFixed(2)}
+        onChange={(lo, hi) => onChange({ ...filters, delta_min: lo, delta_max: hi })}
+      />
       <div className="field-row">
         <Num label="OI mín" value={filters.oi_min} min={0} onChange={(v) => set("oi_min", v)} />
         <Num

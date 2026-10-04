@@ -8,6 +8,7 @@ valor absoluto.
 from __future__ import annotations
 
 import re
+from datetime import date
 from typing import Annotated, Literal
 
 from pydantic import (
@@ -194,6 +195,11 @@ class TickerOverview(BaseModel):
     dte: int | None = None
     atm_strike: float | None = None
     atm_iv: float | None = None  # porcentaje
+    hv30: float | None = None  # volatilidad histórica 30d anualizada, %
+    range52w_pct: float | None = None
+    high_52w: float | None = None
+    low_52w: float | None = None
+    hv_percentile_52w: float | None = None
     call: AtmLeg | None = None
     put: AtmLeg | None = None
     error: str | None = None
@@ -209,3 +215,88 @@ class OverviewMeta(BaseModel):
 class OverviewResponse(BaseModel):
     items: list[TickerOverview]
     meta: OverviewMeta
+
+
+class ChainParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    ticker: str
+    expiration: date | None = None
+
+    @field_validator("ticker", mode="before")
+    @classmethod
+    def _parse_ticker(cls, value: object) -> str:
+        tickers = parse_tickers(value)
+        if len(tickers) != 1:
+            raise ValueError("Se espera un único ticker")
+        return tickers[0]
+
+
+class ChainLeg(BaseModel):
+    contract_symbol: str
+    bid: float
+    ask: float
+    mid: float
+    last: float
+    volume: int
+    open_interest: int
+    iv: float | None = None  # porcentaje
+    greeks: Greeks | None = None
+    pop_short: float | None = None  # porcentaje
+    itm_prob: float | None = None  # porcentaje
+
+
+class ChainRow(BaseModel):
+    strike: float
+    call: ChainLeg | None = None
+    put: ChainLeg | None = None
+
+
+class ChainExpiration(BaseModel):
+    date: str
+    dte: int
+
+
+class ChainMeta(BaseModel):
+    risk_free_rate: float
+    generated_at: str  # ISO UTC
+
+
+class ChainResponse(BaseModel):
+    ticker: str
+    spot: float
+    expirations: list[ChainExpiration]
+    expiration: str | None = None
+    dte: int | None = None
+    rows: list[ChainRow] = []
+    meta: ChainMeta
+
+
+class HistoryParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    ticker: str
+    interval: Literal["1h", "1d", "1wk"] = "1d"
+
+    @field_validator("ticker", mode="before")
+    @classmethod
+    def _parse_ticker(cls, value: object) -> str:
+        tickers = parse_tickers(value)
+        if len(tickers) != 1:
+            raise ValueError("Se espera un único ticker")
+        return tickers[0]
+
+
+class Candle(BaseModel):
+    time: int  # unix seconds UTC
+    open: float
+    high: float
+    low: float
+    close: float
+    volume: int
+
+
+class HistoryResponse(BaseModel):
+    ticker: str
+    interval: str
+    candles: list[Candle]

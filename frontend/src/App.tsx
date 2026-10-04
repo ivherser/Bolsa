@@ -6,6 +6,7 @@ import PresetBar from "./components/PresetBar";
 import ResultsTable from "./components/ResultsTable";
 import SourceStatus from "./components/SourceStatus";
 import TickerChips from "./components/TickerChips";
+import TickerDetail from "./components/TickerDetail";
 import TickerOverview from "./components/TickerOverview";
 import { PRESETS } from "./presets";
 import { clearState, defaultState, loadState, saveState } from "./storage";
@@ -23,6 +24,7 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<OptionResult | null>(null);
+  const [selectedTicker, setSelectedTicker] = useState<string | null>(null);
   const [searchErrorKey, setSearchErrorKey] = useState(0);
   const [lastSearchOk, setLastSearchOk] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
@@ -39,6 +41,10 @@ export default function App() {
     setFilters(d.filters);
     setOverviewDte(d.overviewDte);
   };
+
+  useEffect(() => {
+    if (selectedTicker && !tickers.includes(selectedTicker)) setSelectedTicker(null);
+  }, [tickers, selectedTicker]);
 
   const applyPreset = (id: string) => {
     const p = PRESETS.find((x) => x.id === id);
@@ -101,7 +107,16 @@ export default function App() {
             onDteChange={setOverviewDte}
             onLoadOk={() => setLastSearchOk(Date.now())}
             onLoadError={() => setSearchErrorKey((k) => k + 1)}
+            selected={selectedTicker}
+            onSelect={setSelectedTicker}
           />
+          {selectedTicker && (
+            <TickerDetail
+              ticker={selectedTicker}
+              onClose={() => setSelectedTicker(null)}
+              onError={() => setSearchErrorKey((k) => k + 1)}
+            />
+          )}
           <ResultsTable
             results={results}
             warnings={warnings}

@@ -12,10 +12,16 @@ Proyecto único desplegable en Vercel:
 ```
 api/
   screener.py     # handler BaseHTTPRequestHandler (GET /api/screener)
+  status.py       # GET /api/status (sonda de Yahoo)
+  overview.py     # GET /api/overview (resumen por ticker)
+  chain.py        # GET /api/chain (cadena por expiración + POP)
+  history.py      # GET /api/history (velas OHLCV)
   _models.py      # modelos pydantic y validación de parámetros
   _greeks.py      # Black-Scholes puro (scipy.stats.norm)
   _data.py        # yfinance + caché en memoria (TTL 15 min)
   _screener.py    # métricas de estrategia, filtros, ordenación, deadline
+  _overview.py    # resumen por ticker + HV/52s
+  _chain.py       # construcción de filas call/put y POP
 frontend/         # app React + Vite
 scripts/dev_api.py# servidor local stdlib (sustituye a un uvicorn separado)
 tests/            # pytest
@@ -45,9 +51,20 @@ vercel.json       # build del frontend + configuración de la función
 
 Parámetros desconocidos → `400 {"error":"Parámetros inválidos","details":[…]}`.
 
-`GET /api/overview?tickers=…&dte=30` devuelve por cada ticker su cotización (último, cierre previo, variación, volumen) y las griegas ATM (call y put) de la expiración más cercana al `dte` objetivo: `{"items": [{"ticker","spot","previous_close","change","change_pct","volume","expiration","dte","atm_strike","atm_iv","call","put","error"}], "meta": {"risk_free_rate","generated_at","truncated","warnings"}}`. Caché: `no-cache` al navegador y `Vercel-CDN-Cache-Control: max-age=60, stale-while-revalidate=120`; errores `no-store`. El panel «Resumen de tickers» lo muestra encima de la tabla de resultados.
+`GET /api/overview?tickers=…&dte=30` devuelve por cada ticker su cotización (último, cierre previo, variación, volumen), estadísticas de volatilidad/rango de 52 semanas (a partir del histórico diario de 2 años) y las griegas ATM (call y put) de la expiración más cercana al `dte` objetivo: `{"items": [{"ticker","spot","previous_close","change","change_pct","volume","hv30","range52w_pct","high_52w","low_52w","hv_percentile_52w","expiration","dte","atm_strike","atm_iv","call","put","error"}], "meta": {"risk_free_rate","generated_at","truncated","warnings"}}`. Caché: `no-cache` al navegador y `Vercel-CDN-Cache-Control: max-age=60, stale-while-revalidate=120`; errores `no-store`. El panel «Resumen de tickers» lo muestra encima de la tabla de resultados; un clic en una fila abre el panel de detalle (velas + cadena de opciones).
+
+- `hv30` (VH 30d): desviación típica (ddof=1) de los últimos 30 retornos log diarios del cierre × √252 × 100 (%). `null` con <31 cierres.
+- `range52w_pct` (Pos. 52s): (spot − mín 52s)/(máx 52s − mín 52s) × 100 con los últimos 252 días, acotado a 0–100; `high_52w`/`low_52w` dan los extremos.
+- `hv_percentile_52w` (Pct. VH 52s): percentil del HV 30d actual dentro de la serie rolling de HV de los últimos 252 valores (mín. 20). Yahoo no publica IV histórica, así que es un percentil de volatilidad histórica (realizada), no de IV.
+- La columna «VI ATM» se pinta verde si supera la VH 30d (opciones «caras» frente a lo realizado) y roja si es inferior.
+
+`GET /api/chain?ticker=SPY[&expiration=YYYY-MM-DD]` — sin `expiration` devuelve `{ticker, spot, expirations: [{date, dte}] (solo dte ≥ 1), expiration: null, dte: null, rows: [], meta}`; con `expiration` (debe estar en la lista, si no `400 {"error":"Expiración no disponible"}`) añade `rows`: unión ordenada de strikes call/put, cada uno `{strike, call, put}` con `ChainLeg{contract_symbol, bid, ask, mid, last, volume, open_interest, iv, greeks, pop_short, itm_prob}`. `itm_prob` = P(expirar ITM) bajo lognormal (call = N(d2), put = 1−N(d2)) y `pop_short` = 100 − itm_prob (probabilidad de éxito vendiendo la opción). IV inválida (NaN o ≤1 %) → precios conservados pero iv/griegas/POP null. Caché: `no-cache` + CDN `max-age=60, stale-while-revalidate=120`; timeout → `504 {"error":"Tiempo límite alcanzado"}`.
+
+`GET /api/history?ticker=SPY&interval=1h|1d|1wk` (defecto `1d`) devuelve `{ticker, interval, candles: [{time (unix s), open, high, low, close, volume}]}` con períodos 60d/1y/5y respectivamente; filas con OHLC NaN descartadas. Caché: `no-cache` + CDN `max-age=300, stale-while-revalidate=600`; timeout → 504. Alimenta el gráfico de velas (lightweight-charts) del panel de detalle.
 
 `GET /api/status` comprueba si Yahoo responde (options de SPY, con memo de 60 s y timeout de 5 s) y devuelve `{"source": "yahoo", "connected": true, "latency_ms": 120, "checked_at": "2025-01-01T00:00:00Z"}`. El indicador del encabezado ("Yahoo Finance" con punto verde/rojo/ámbar) lo usa para mostrar la fuente y el estado de conexión; es clicable para re-comprobar.
+
+Los filtros DTE y |Delta| usan un deslizador de doble pulgar (mín–máx en un solo control), con los campos numéricos de DTE debajo.
 
 Los tickers, el preset y los filtros se guardan en el navegador (localStorage, clave `bolsa:state:v1`) y se restauran al recargar; el botón «Restablecer» los limpia.
 

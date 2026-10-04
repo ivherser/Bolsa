@@ -53,6 +53,11 @@ class FakeProvider:
             raise RuntimeError("boom")
         return self.chains[(ticker, expiration)], False
 
+    def get_daily_history(self, ticker):
+        if ticker in self.fail:
+            raise RuntimeError("boom")
+        return [], False
+
 
 def exp(days):
     return (TODAY + timedelta(days=days)).isoformat()
