@@ -384,8 +384,10 @@ export default function CandleChart({
       );
       macdRefs.current = [mline, sline, h as unknown as ISeriesApi<"Line">];
     }
-    for (const pane of chart.panes().slice(1)) {
-      pane.setHeight(SUBPANE_H);
+    const panes = chart.panes();
+    panes[0]?.setStretchFactor(baseH);
+    for (const pane of panes.slice(1)) {
+      pane.setStretchFactor(SUBPANE_H);
     }
   }, [prefs.rsi, prefs.macd, ready]);
 
@@ -469,7 +471,10 @@ export default function CandleChart({
       ...all.filter((t) => new Date(t * 1000).toISOString().slice(0, 10) <= expUtc),
     );
     expTargetRef.current = Number.isFinite(target) ? target : null;
-    chart.timeScale().fitContent();
+    chart.timeScale().setVisibleLogicalRange({
+      from: -2,
+      to: candles.length + ws.length + 2,
+    });
     const updateMarker = () => {
       const tgt = expTargetRef.current;
       if (tgt === null) {
