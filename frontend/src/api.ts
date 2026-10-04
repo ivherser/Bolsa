@@ -1,5 +1,8 @@
 import type {
+  ChainResponse,
   Filters,
+  HistoryInterval,
+  HistoryResponse,
   OptionResult,
   OverviewMeta,
   OverviewResponse,
@@ -111,6 +114,38 @@ export async function fetchOverview(
     if (r.meta.truncated) merged.meta.truncated = true;
   }
   return merged;
+}
+
+export async function fetchChain(
+  ticker: string,
+  expiration?: string,
+  signal?: AbortSignal,
+): Promise<ChainResponse> {
+  const p = new URLSearchParams({ ticker });
+  if (expiration) p.set("expiration", expiration);
+  const res = await fetch(`/api/chain?${p.toString()}`, { signal: signal ?? null });
+  if (!res.ok) {
+    let msg = `Error ${res.status}`;
+    try {
+      const body = (await res.json()) as { error?: string };
+      if (body.error) msg = body.error;
+    } catch {
+      // respuesta no-JSON
+    }
+    throw new Error(msg);
+  }
+  return (await res.json()) as ChainResponse;
+}
+
+export async function fetchHistory(
+  ticker: string,
+  interval: HistoryInterval,
+  signal?: AbortSignal,
+): Promise<HistoryResponse> {
+  const p = new URLSearchParams({ ticker, interval });
+  const res = await fetch(`/api/history?${p.toString()}`, { signal: signal ?? null });
+  if (!res.ok) throw new Error(`Error ${res.status}`);
+  return (await res.json()) as HistoryResponse;
 }
 
 export async function fetchScreener(
