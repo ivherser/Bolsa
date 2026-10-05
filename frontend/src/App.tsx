@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchScreener } from "./api";
 import DetailPanel from "./components/DetailPanel";
 import FilterPanel from "./components/FilterPanel";
+import { HelpContext, HelpToggle } from "./components/Help";
 import PresetBar from "./components/PresetBar";
 import ResultsTable from "./components/ResultsTable";
 import SourceStatus from "./components/SourceStatus";
@@ -27,6 +28,7 @@ export default function App() {
   const [selectedTicker, setSelectedTicker] = useState<string | null>(null);
   const [searchErrorKey, setSearchErrorKey] = useState(0);
   const [lastSearchOk, setLastSearchOk] = useState(0);
+  const [help, setHelp] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -86,8 +88,12 @@ export default function App() {
     <div className="app">
       <header>
         <h1>Bolsa — Screener de opciones</h1>
-        <SourceStatus refreshKey={searchErrorKey} lastSearchOk={lastSearchOk} />
+        <div className="header-right">
+          <SourceStatus refreshKey={searchErrorKey} lastSearchOk={lastSearchOk} />
+          <HelpToggle on={help} onToggle={() => setHelp((v) => !v)} />
+        </div>
       </header>
+      <HelpContext.Provider value={help}>
       <div className="layout">
         <aside className="sidebar">
           <PresetBar activeId={presetId} onSelect={applyPreset} onReset={resetAll} />
@@ -129,6 +135,7 @@ export default function App() {
         </main>
         {selected && <DetailPanel result={selected} onClose={() => setSelected(null)} />}
       </div>
+      </HelpContext.Provider>
       <footer className="disclaimer">
         Datos de Yahoo Finance con retraso aproximado de 15 minutos. Las griegas son calculadas
         (Black-Scholes, sin dividendos), no de mercado. Esta herramienta no es asesoramiento

@@ -1,5 +1,7 @@
+import type { HelpKey } from "../help";
 import type { Filters, SortField } from "../types";
 import DualRange from "./DualRange";
+import { Info } from "./Help";
 
 interface Props {
   filters: Filters;
@@ -32,6 +34,7 @@ function Num({
   step = 1,
   min,
   max,
+  help,
 }: {
   label: string;
   value: number;
@@ -39,10 +42,14 @@ function Num({
   step?: number;
   min?: number;
   max?: number;
+  help?: HelpKey;
 }) {
   return (
     <div className="field">
-      <label>{label}</label>
+      <label>
+        {label}
+        {help && <Info k={help} />}
+      </label>
       <input
         type="number"
         value={value}
@@ -62,7 +69,10 @@ export default function FilterPanel({ filters, onChange, onSearch, loading, canS
   return (
     <div>
       <div className="field">
-        <label>Tipo de opción</label>
+        <label>
+          Tipo de opción
+          <Info k="option_type" />
+        </label>
         <select
           value={filters.option_type}
           onChange={(e) => set("option_type", e.target.value as Filters["option_type"])}
@@ -73,7 +83,10 @@ export default function FilterPanel({ filters, onChange, onSearch, loading, canS
         </select>
       </div>
       <div className="field">
-        <label>Estrategia</label>
+        <label>
+          Estrategia
+          <Info k="strategy" />
+        </label>
         <select
           value={filters.strategy}
           onChange={(e) => set("strategy", e.target.value as Filters["strategy"])}
@@ -86,6 +99,7 @@ export default function FilterPanel({ filters, onChange, onSearch, loading, canS
       {filters.strategy === "credit_spread" && (
         <Num
           label="Ancho del spread ($)"
+          help="spread_width"
           value={filters.spread_width}
           step={0.5}
           min={0.5}
@@ -101,6 +115,7 @@ export default function FilterPanel({ filters, onChange, onSearch, loading, canS
         low={filters.dte_min}
         high={filters.dte_max}
         onChange={(lo, hi) => onChange({ ...filters, dte_min: lo, dte_max: hi })}
+        help="dte"
       />
       <div className="field-row">
         <div className="field">
@@ -133,11 +148,19 @@ export default function FilterPanel({ filters, onChange, onSearch, loading, canS
         high={filters.delta_max}
         format={(v) => v.toFixed(2)}
         onChange={(lo, hi) => onChange({ ...filters, delta_min: lo, delta_max: hi })}
+        help="delta"
       />
       <div className="field-row">
-        <Num label="OI mín" value={filters.oi_min} min={0} onChange={(v) => set("oi_min", v)} />
+        <Num
+          label="OI mín"
+          help="oi"
+          value={filters.oi_min}
+          min={0}
+          onChange={(v) => set("oi_min", v)}
+        />
         <Num
           label="Volumen mín"
+          help="volume_opt"
           value={filters.volume_min}
           min={0}
           onChange={(v) => set("volume_min", v)}
@@ -145,7 +168,10 @@ export default function FilterPanel({ filters, onChange, onSearch, loading, canS
       </div>
       <div className="field-row">
         <div className="field">
-          <label>Spread máx % (vacío = sin límite)</label>
+          <label>
+            Spread máx % (vacío = sin límite)
+            <Info k="spread" />
+          </label>
           <input
             type="number"
             min={0}
@@ -158,6 +184,7 @@ export default function FilterPanel({ filters, onChange, onSearch, loading, canS
         </div>
         <Num
           label="IV mín %"
+          help="iv"
           value={filters.iv_min}
           min={0}
           onChange={(v) => set("iv_min", v)}
@@ -166,6 +193,7 @@ export default function FilterPanel({ filters, onChange, onSearch, loading, canS
       <div className="field-row">
         <Num
           label="POP mín %"
+          help="pop"
           value={filters.pop_min}
           min={0}
           max={100}
@@ -173,6 +201,7 @@ export default function FilterPanel({ filters, onChange, onSearch, loading, canS
         />
         <Num
           label="Expiraciones/ticker"
+          help="max_expirations"
           value={filters.max_expirations}
           min={1}
           max={12}
@@ -181,7 +210,10 @@ export default function FilterPanel({ filters, onChange, onSearch, loading, canS
       </div>
       <div className="field-row">
         <div className="field">
-          <label>Ordenar por</label>
+          <label>
+            Ordenar por
+            <Info k="sort_by" />
+          </label>
           <select
             value={filters.sort_by}
             onChange={(e) => set("sort_by", e.target.value as SortField)}
@@ -194,7 +226,10 @@ export default function FilterPanel({ filters, onChange, onSearch, loading, canS
           </select>
         </div>
         <div className="field">
-          <label>Orden</label>
+          <label>
+            Orden
+            <Info k="sort_order" />
+          </label>
           <select
             value={filters.sort_order}
             onChange={(e) => set("sort_order", e.target.value as Filters["sort_order"])}

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchChain } from "../api";
 import type { ChainLeg, ChainResponse } from "../types";
 import CandleChart from "./CandleChart";
+import { Info } from "./Help";
 
 const nf = new Intl.NumberFormat("es-ES", { maximumFractionDigits: 2 });
 const nf4 = new Intl.NumberFormat("es-ES", {
@@ -174,29 +175,65 @@ export default function TickerDetail({ ticker, onClose, onError }: Props) {
                 <table className="chain-table">
                   <thead>
                     <tr>
-                      <th colSpan={6}>CALLS</th>
+                      <th colSpan={6}>
+                        CALLS
+                        <Info k="chain" />
+                      </th>
                       <th rowSpan={2} className="strike-col">
                         Strike
+                        <Info k="strike" />
                       </th>
                       <th colSpan={6}>PUTS</th>
                     </tr>
                     <tr>
-                      <th>Bid</th>
-                      <th>Ask</th>
-                      <th>Mid</th>
-                      <th>VI</th>
-                      <th>Δ</th>
-                      <th title="Probabilidad de éxito vendiendo la opción (expira OTM, lognormal con la VI)">
-                        POP
+                      <th>
+                        Bid
+                        <Info k="bid" />
+                      </th>
+                      <th>
+                        Ask
+                        <Info k="ask" />
+                      </th>
+                      <th>
+                        Mid
+                        <Info k="mid" />
+                      </th>
+                      <th>
+                        VI
+                        <Info k="iv" />
+                      </th>
+                      <th>
+                        Δ
+                        <Info k="delta" />
                       </th>
                       <th title="Probabilidad de éxito vendiendo la opción (expira OTM, lognormal con la VI)">
                         POP
+                        <Info k="pop_short" />
                       </th>
-                      <th>Δ</th>
-                      <th>VI</th>
-                      <th>Mid</th>
-                      <th>Ask</th>
-                      <th>Bid</th>
+                      <th title="Probabilidad de éxito vendiendo la opción (expira OTM, lognormal con la VI)">
+                        POP
+                        <Info k="pop_short" />
+                      </th>
+                      <th>
+                        Δ
+                        <Info k="delta" />
+                      </th>
+                      <th>
+                        VI
+                        <Info k="iv" />
+                      </th>
+                      <th>
+                        Mid
+                        <Info k="mid" />
+                      </th>
+                      <th>
+                        Ask
+                        <Info k="ask" />
+                      </th>
+                      <th>
+                        Bid
+                        <Info k="bid" />
+                      </th>
                     </tr>
                   </thead>
                   <tbody>

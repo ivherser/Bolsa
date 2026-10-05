@@ -1,4 +1,5 @@
 import { PRESETS } from "../presets";
+import { Info } from "./Help";
 
 interface Props {
   activeId: string;
@@ -10,7 +11,10 @@ export default function PresetBar({ activeId, onSelect, onReset }: Props) {
   return (
     <div className="field">
       <div className="label-row">
-        <label>Estrategia predefinida</label>
+        <label>
+          Estrategia predefinida
+          <Info k="preset" />
+        </label>
         <button
           type="button"
           className="link-btn"

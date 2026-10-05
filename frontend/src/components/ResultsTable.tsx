@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import { sortResults } from "../api";
+import type { HelpKey } from "../help";
 import type { OptionResult, SortField, SortOrder } from "../types";
+import { Info } from "./Help";
 
 const nf = new Intl.NumberFormat("es-ES", { maximumFractionDigits: 2 });
 const nf4 = new Intl.NumberFormat("es-ES", {
@@ -11,19 +13,20 @@ const nf4 = new Intl.NumberFormat("es-ES", {
 interface Col {
   field: SortField;
   label: string;
+  help?: HelpKey;
 }
 
 const COLS: Col[] = [
   { field: "ticker", label: "Ticker" },
-  { field: "expiration", label: "Exp (DTE)" },
-  { field: "strike", label: "Strike" },
-  { field: "mid", label: "Bid/Ask" },
-  { field: "oi", label: "OI" },
-  { field: "volume", label: "Vol" },
-  { field: "delta", label: "Δ" },
-  { field: "iv", label: "IV %" },
-  { field: "pop", label: "POP %" },
-  { field: "ror_day", label: "RoR/día %" },
+  { field: "expiration", label: "Exp (DTE)", help: "expiration" },
+  { field: "strike", label: "Strike", help: "strike" },
+  { field: "mid", label: "Bid/Ask", help: "mid" },
+  { field: "oi", label: "OI", help: "oi" },
+  { field: "volume", label: "Vol", help: "volume_opt" },
+  { field: "delta", label: "Δ", help: "delta" },
+  { field: "iv", label: "IV %", help: "iv" },
+  { field: "pop", label: "POP %", help: "pop" },
+  { field: "ror_day", label: "RoR/día %", help: "ror_day" },
 ];
 
 interface Props {
@@ -87,9 +90,6 @@ export default function ResultsTable({
       )}
       {error && <div className="state-msg neg">{error}</div>}
       {!error && loading && <div className="state-msg">Cargando cadenas de opciones…</div>}
-      {!error && !loading && sorted === null && (
-        <div className="state-msg">Configura los filtros y pulsa «Buscar».</div>
-      )}
       {!error && !loading && sorted !== null && sorted.length === 0 && (
         <div className="state-msg">Sin resultados para estos filtros.</div>
       )}
@@ -100,6 +100,7 @@ export default function ResultsTable({
               {COLS.map((c) => (
                 <th key={c.field} onClick={() => toggleSort(c.field)}>
                   {c.label}
+                  {c.help && <Info k={c.help} />}
                   {sortBy === c.field ? (sortOrder === "asc" ? " ▲" : " ▼") : ""}
                 </th>
               ))}

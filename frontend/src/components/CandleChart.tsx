@@ -22,6 +22,7 @@ import {
 } from "../storage";
 import type { ChartPrefs, DrawnLine } from "../storage";
 import type { Candle, HistoryInterval } from "../types";
+import { Info } from "./Help";
 
 const INTERVALS: { id: HistoryInterval; label: string }[] = [
   { id: "1h", label: "1H" },
@@ -527,6 +528,7 @@ export default function CandleChart({
               {o.label}
             </button>
           ))}
+          <Info k="interval" />
         </div>
         <div className="ind-tabs">
           {SMA_DEFS.map((d) => (
@@ -540,6 +542,7 @@ export default function CandleChart({
               {d.label}
             </button>
           ))}
+          <Info k="sma" />
           <button
             type="button"
             className={prefs.rsi ? "tab active" : "tab"}
@@ -547,6 +550,7 @@ export default function CandleChart({
           >
             RSI
           </button>
+          <Info k="rsi" />
           <button
             type="button"
             className={prefs.macd ? "tab active" : "tab"}
@@ -554,6 +558,7 @@ export default function CandleChart({
           >
             MACD
           </button>
+          <Info k="macd" />
           <button
             type="button"
             className={drawMode ? "tab active" : "tab"}
@@ -565,6 +570,7 @@ export default function CandleChart({
           >
             Línea
           </button>
+          <Info k="draw" />
           <button type="button" className="tab" onClick={clearLines}>
             Borrar líneas
           </button>
@@ -584,6 +590,7 @@ export default function CandleChart({
               style={marker.flip ? { right: 4, left: "auto" } : undefined}
             >
               {marker.label}
+              <Info k="exp_marker" />
             </span>
           </div>
         )}
