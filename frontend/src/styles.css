@@ -730,7 +730,7 @@ footer.disclaimer {
 
 .exp-marker-label {
   position: absolute;
-  top: 4px;
+  bottom: 34px;
   left: 4px;
   font-size: 10px;
   color: #f5c542;
