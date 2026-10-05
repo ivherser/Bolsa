@@ -821,3 +821,40 @@ footer.disclaimer {
 .strike-selected .strike-col {
   color: #ff7ab6;
 }
+
+.line-handle {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid #f5c542;
+  background: rgba(23, 30, 46, 0.9);
+  pointer-events: auto;
+  z-index: 5;
+  cursor: grab;
+}
+
+.line-delete {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid #f5c542;
+  background: #0f1524;
+  color: #f5c542;
+  font-size: 11px;
+  line-height: 1;
+  padding: 0;
+  pointer-events: auto;
+  z-index: 5;
+  cursor: pointer;
+}
+
+.app-version {
+  color: var(--muted);
+  font-size: 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-variant-numeric: tabular-nums;
+}

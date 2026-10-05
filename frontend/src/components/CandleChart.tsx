@@ -126,6 +126,11 @@ export default function CandleChart({
     label: string;
     flip: boolean;
   } | null>(null);
+  const [selected, setSelected] = useState<number | null>(null);
+  const [handles, setHandles] = useState<{
+    p1: { x: number; y: number } | null;
+    p2: { x: number; y: number } | null;
+  } | null>(null);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -138,9 +143,12 @@ export default function CandleChart({
   const drawingsRef = useRef<DrawnLine[]>([]);
   const pendingRef = useRef<{ t: number; p: number } | null>(null);
   const expTargetRef = useRef<number | null>(null);
+  const selectedRef = useRef<number | null>(null);
+  const dragRef = useRef<{ end: 1 | 2 } | null>(null);
   const [ready, setReady] = useState(0);
   const errRef = useRef(onError);
   errRef.current = onError;
+  selectedRef.current = selected;
 
   const subPanes = (prefs.rsi ? 1 : 0) + (prefs.macd ? 1 : 0);
   const baseH = typeof window !== "undefined" && window.innerWidth < 700 ? 240 : 320;
@@ -206,6 +214,8 @@ export default function CandleChart({
     setAwaitingSecond(false);
     setMarker(null);
     expTargetRef.current = null;
+    setSelected(null);
+    setHandles(null);
 
     fetchHistory(ticker, interval, ctrl.signal)
       .then((resp) => {
@@ -396,6 +406,116 @@ export default function CandleChart({
     }
   }, [prefs.rsi, prefs.macd, ready]);
 
+  // Posiciones de los handles de la línea seleccionada
+  const updateHandlesRef = useRef(() => {});
+  updateHandlesRef.current = () => {
+    const chart = chartRef.current;
+    const cs = candleSeriesRef.current;
+    const i = selectedRef.current;
+    const d = i === null ? null : drawingsRef.current[i];
+    if (!chart || !cs || !d) {
+      setHandles(null);
+      return;
+    }
+    const conv = (t: number, p: number) => {
+      const x = chart.timeScale().timeToCoordinate(t as UT);
+      const y = cs.priceToCoordinate(p);
+      return x === null || y === null ? null : { x, y };
+    };
+    setHandles({ p1: conv(d.t1, d.p1), p2: conv(d.t2, d.p2) });
+  };
+
+  // Selección de línea + resaltado
+  useEffect(() => {
+    const chart = chartRef.current;
+    const cs = candleSeriesRef.current;
+    if (!chart || !cs || !ready) return;
+    lineSeriesRefs.current.forEach((s, i) =>
+      s.applyOptions({ lineWidth: i === selected ? 2 : 1 }),
+    );
+    updateHandlesRef.current();
+  }, [selected, ready]);
+
+  // Reposicionar handles al mover/redimensionar/zoom
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart || !ready) return;
+    const upd = () => updateHandlesRef.current();
+    const ts = chart.timeScale();
+    ts.subscribeVisibleLogicalRangeChange(upd);
+    chart.subscribeCrosshairMove(upd);
+    const ro = new ResizeObserver(upd);
+    if (containerRef.current) ro.observe(containerRef.current);
+    return () => {
+      ts.unsubscribeVisibleLogicalRangeChange(upd);
+      chart.unsubscribeCrosshairMove(upd);
+      ro.disconnect();
+    };
+  }, [ready, ticker, interval]);
+
+  const deleteSelected = () => {
+    const chart = chartRef.current;
+    const i = selectedRef.current;
+    if (!chart || i === null) return;
+    const s = lineSeriesRefs.current[i];
+    if (s) chart.removeSeries(s);
+    lineSeriesRefs.current.splice(i, 1);
+    drawingsRef.current.splice(i, 1);
+    saveDrawings(`${ticker}:${interval}`, drawingsRef.current);
+    setSelected(null);
+  };
+
+  // Selección por click (fuera del modo dibujo) + teclas
+  useEffect(() => {
+    const chart = chartRef.current;
+    const cs = candleSeriesRef.current;
+    if (!chart || !cs || !ready || drawMode) return;
+    const ts = chart.timeScale();
+    const handler = (param: MouseEventParams<Time>) => {
+      const paneIndex = (param as MouseEventParams<Time> & { paneIndex?: number }).paneIndex;
+      if (paneIndex !== undefined && paneIndex !== 0) return;
+      if (!param.point) return;
+      const { x: px, y: py } = param.point;
+      let best = -1;
+      let bestD = 6;
+      drawingsRef.current.forEach((d, i) => {
+        const x1 = ts.timeToCoordinate(d.t1 as UT);
+        const y1 = cs.priceToCoordinate(d.p1);
+        const x2 = ts.timeToCoordinate(d.t2 as UT);
+        const y2 = cs.priceToCoordinate(d.p2);
+        if (x1 === null || y1 === null || x2 === null || y2 === null) return;
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const len2 = dx * dx + dy * dy;
+        const u = len2 === 0 ? 0 : Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / len2));
+        const dist = Math.hypot(px - (x1 + u * dx), py - (y1 + u * dy));
+        if (dist <= bestD) {
+          bestD = dist;
+          best = i;
+        }
+      });
+      setSelected(best === -1 ? null : best);
+    };
+    chart.subscribeClick(handler);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setSelected(null);
+      if (
+        (e.key === "Delete" || e.key === "Backspace") &&
+        selectedRef.current !== null &&
+        !(e.target instanceof HTMLInputElement) &&
+        !(e.target instanceof HTMLSelectElement)
+      ) {
+        e.preventDefault();
+        deleteSelected();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      chart.unsubscribeClick(handler);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [drawMode, ready, ticker, interval]);
+
   // Modo dibujo: líneas punto a punto
   useEffect(() => {
     const chart = chartRef.current;
@@ -545,16 +665,57 @@ export default function CandleChart({
     };
   }, [expiration, expirationDte, ready, interval]);
 
-  const clearLines = () => {
-    lineSeriesRefs.current.forEach(removeSeries);
-    lineSeriesRefs.current = [];
-    drawingsRef.current = [];
-    pendingRef.current = null;
-    setAwaitingSecond(false);
-    saveDrawings(`${ticker}:${interval}`, []);
+  const onHandleDown = (end: 1 | 2) => (e: React.PointerEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    e.preventDefault();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    dragRef.current = { end };
+    chartRef.current?.applyOptions({ handleScroll: false, handleScale: false });
+  };
+
+  const onHandleMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const drag = dragRef.current;
+    const i = selectedRef.current;
+    const rect = containerRef.current?.getBoundingClientRect();
+    const chart = chartRef.current;
+    const cs = candleSeriesRef.current;
+    if (!drag || i === null || !rect || !chart || !cs) return;
+    const d = drawingsRef.current[i];
+    if (!d) return;
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const t = chart.timeScale().coordinateToTime(x);
+    const p = cs.coordinateToPrice(y);
+    const otherT = drag.end === 1 ? d.t2 : d.t1;
+    if (p !== null) {
+      if (drag.end === 1) d.p1 = p;
+      else d.p2 = p;
+    }
+    if (t !== null && (t as number) !== otherT) {
+      if (drag.end === 1) d.t1 = t as number;
+      else d.t2 = t as number;
+    }
+    lineSeriesRefs.current[i]?.setData(
+      [
+        { time: d.t1 as UT, value: d.p1 },
+        { time: d.t2 as UT, value: d.p2 },
+      ].sort((a, b) => a.time - b.time),
+    );
+    updateHandlesRef.current();
+  };
+
+  const onHandleUp = () => {
+    if (!dragRef.current) return;
+    dragRef.current = null;
+    chartRef.current?.applyOptions({ handleScroll: true, handleScale: true });
+    saveDrawings(`${ticker}:${interval}`, drawingsRef.current);
   };
 
   const chartH = baseH + subPanes * SUBPANE_H;
+  const delEnd =
+    handles && (handles.p2 === null || (handles.p1 !== null && handles.p1.x > handles.p2.x))
+      ? handles.p1
+      : handles?.p2 ?? null;
 
   return (
     <div className="candle-chart">
@@ -608,14 +769,12 @@ export default function CandleChart({
               setDrawMode((v) => !v);
               pendingRef.current = null;
               setAwaitingSecond(false);
+              setSelected(null);
             }}
           >
             Línea
           </button>
           <Info k="draw" />
-          <button type="button" className="tab" onClick={clearLines}>
-            Borrar líneas
-          </button>
         </div>
       </div>
       {error && <div className="state-msg neg">{error}</div>}
@@ -625,6 +784,38 @@ export default function CandleChart({
         style={{ height: chartH, cursor: drawMode ? "crosshair" : undefined, position: "relative" }}
       >
         {awaitingSecond && <div className="hint-draw">Elige el segundo punto</div>}
+        {handles?.p1 && (
+          <div
+            className="line-handle"
+            style={{ left: handles.p1.x - 5, top: handles.p1.y - 5 }}
+            onPointerDown={onHandleDown(1)}
+            onPointerMove={onHandleMove}
+            onPointerUp={onHandleUp}
+          />
+        )}
+        {handles?.p2 && (
+          <div
+            className="line-handle"
+            style={{ left: handles.p2.x - 5, top: handles.p2.y - 5 }}
+            onPointerDown={onHandleDown(2)}
+            onPointerMove={onHandleMove}
+            onPointerUp={onHandleUp}
+          />
+        )}
+        {handles && delEnd && (
+          <button
+            type="button"
+            className="line-delete"
+            aria-label="Borrar línea"
+            style={{ left: delEnd.x + 8, top: delEnd.y - 8 }}
+            onClick={(e) => {
+              e.stopPropagation();
+              deleteSelected();
+            }}
+          >
+            ×
+          </button>
+        )}
         {marker && (
           <div className="exp-marker" style={{ left: marker.x }}>
             <span
