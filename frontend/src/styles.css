@@ -566,7 +566,8 @@ footer.disclaimer {
   margin-bottom: 8px;
 }
 
-.interval-tabs .tab {
+.interval-tabs .tab,
+.ind-tabs .tab {
   background: none;
   border: 1px solid var(--border);
   color: var(--text);
@@ -576,7 +577,8 @@ footer.disclaimer {
   cursor: pointer;
 }
 
-.interval-tabs .tab.active {
+.interval-tabs .tab.active,
+.ind-tabs .tab.active {
   background: var(--accent);
   border-color: var(--accent);
   color: #fff;
