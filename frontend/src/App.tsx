@@ -6,7 +6,6 @@ import { HelpContext, HelpToggle } from "./components/Help";
 import PresetBar from "./components/PresetBar";
 import ResultsTable from "./components/ResultsTable";
 import SourceStatus from "./components/SourceStatus";
-import TickerChips from "./components/TickerChips";
 import TickerDetail from "./components/TickerDetail";
 import TickerOverview from "./components/TickerOverview";
 import { PRESETS } from "./presets";
@@ -20,6 +19,7 @@ export default function App() {
   const [presetId, setPresetId] = useState<string>(persisted.presetId);
   const [filters, setFilters] = useState<Filters>(persisted.filters);
   const [overviewDte, setOverviewDte] = useState<number>(persisted.overviewDte);
+  const [overviewSort, setOverviewSort] = useState(persisted.overviewSort);
   const [results, setResults] = useState<OptionResult[] | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [truncated, setTruncated] = useState(false);
@@ -33,8 +33,8 @@ export default function App() {
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    saveState({ tickers, presetId, filters, overviewDte });
-  }, [tickers, presetId, filters, overviewDte]);
+    saveState({ tickers, presetId, filters, overviewDte, overviewSort });
+  }, [tickers, presetId, filters, overviewDte, overviewSort]);
 
   const resetAll = () => {
     clearState();
@@ -43,6 +43,7 @@ export default function App() {
     setPresetId(d.presetId);
     setFilters(d.filters);
     setOverviewDte(d.overviewDte);
+    setOverviewSort(d.overviewSort);
   };
 
   useEffect(() => {
@@ -101,7 +102,6 @@ export default function App() {
       <div className="layout">
         <aside className="sidebar">
           <PresetBar activeId={presetId} onSelect={applyPreset} onReset={resetAll} />
-          <TickerChips tickers={tickers} onChange={setTickers} />
           <FilterPanel
             filters={filters}
             onChange={changeFilters}
@@ -119,6 +119,9 @@ export default function App() {
             onLoadError={() => setSearchErrorKey((k) => k + 1)}
             selected={selectedTicker}
             onSelect={setSelectedTicker}
+            onTickersChange={setTickers}
+            sort={overviewSort}
+            onSortChange={setOverviewSort}
           />
           {selectedTicker && (
             <TickerDetail

@@ -194,3 +194,15 @@ export interface Filters {
   sort_by: SortField;
   sort_order: SortOrder;
 }
+
+export type OverviewSortKey =
+  | "ticker"
+  | "spot"
+  | "change_pct"
+  | "volume"
+  | "hv30"
+  | "range52w_pct"
+  | "hv_percentile_52w"
+  | "dte"
+  | "atm_strike"
+  | "atm_iv";

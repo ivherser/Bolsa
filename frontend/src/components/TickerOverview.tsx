@@ -1,7 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchOverview } from "../api";
-import type { Greeks, TickerOverviewItem } from "../types";
+import type { Greeks, OverviewSortKey, TickerOverviewItem } from "../types";
 import { Info } from "./Help";
+import TickerInput from "./TickerInput";
+
+export interface OverviewSort {
+  key: OverviewSortKey;
+  dir: "asc" | "desc";
+}
 
 const nf = new Intl.NumberFormat("es-ES", { maximumFractionDigits: 2 });
 const nf4 = new Intl.NumberFormat("es-ES", {
@@ -45,6 +51,9 @@ interface Props {
   onLoadError: () => void;
   selected: string | null;
   onSelect: (ticker: string | null) => void;
+  onTickersChange: (tickers: string[]) => void;
+  sort: OverviewSort | null;
+  onSortChange: (sort: OverviewSort | null) => void;
 }
 
 export default function TickerOverview({
@@ -55,6 +64,9 @@ export default function TickerOverview({
   onLoadError,
   selected,
   onSelect,
+  onTickersChange,
+  sort,
+  onSortChange,
 }: Props) {
   const [items, setItems] = useState<TickerOverviewItem[] | null>(null);
   const [dteDraft, setDteDraft] = useState(String(dte));
@@ -119,11 +131,38 @@ export default function TickerOverview({
     if (!dteValid) setDteDraft(String(dte));
   };
 
+  const toggleSort = (key: OverviewSortKey) => {
+    if (sort?.key === key) {
+      onSortChange({ key, dir: sort.dir === "asc" ? "desc" : "asc" });
+    } else {
+      onSortChange({ key, dir: key === "ticker" ? "asc" : "desc" });
+    }
+  };
+
+  const arrow = (k: OverviewSortKey) =>
+    sort?.key === k ? (sort.dir === "asc" ? " ▲" : " ▼") : null;
+
+  const visible = (items ?? []).filter((it) => tickers.includes(it.ticker));
+  const sorted = [...visible].sort((a, b) => {
+    if (!sort) return tickers.indexOf(a.ticker) - tickers.indexOf(b.ticker);
+    const av = a[sort.key];
+    const bv = b[sort.key];
+    if (av === null && bv === null) return tickers.indexOf(a.ticker) - tickers.indexOf(b.ticker);
+    if (av === null) return 1;
+    if (bv === null) return -1;
+    const cmp =
+      typeof av === "string"
+        ? av.localeCompare(bv as string)
+        : (av as number) - (bv as number);
+    return sort.dir === "asc" ? cmp : -cmp;
+  });
+
   return (
     <section className="overview">
       <div className="overview-header">
-        <h2>Resumen de tickers</h2>
+        <h2>Lista de tickers</h2>
         <div className="overview-controls">
+          <TickerInput tickers={tickers} onChange={onTickersChange} />
           <label htmlFor="overview-dte">
             DTE objetivo
             <Info k="dte_target" />
@@ -155,50 +194,77 @@ export default function TickerOverview({
       {!error && loading && items === null && (
         <div className="state-msg">Cargando resumen…</div>
       )}
-      {!error && items !== null && items.length > 0 && (
+      {!error && tickers.length === 0 && (
+        <div className="state-msg">Añade un ticker con el buscador</div>
+      )}
+      {!error && items !== null && visible.length > 0 && (
         <div className="overview-scroll">
           <table className="overview-table">
             <thead>
               <tr>
-                <th rowSpan={2}>Ticker</th>
-                <th rowSpan={2}>
+                <th rowSpan={2} className="sortable" onClick={() => toggleSort("ticker")}>
+                  Ticker
+                  {arrow("ticker")}
+                </th>
+                <th rowSpan={2} className="sortable" onClick={() => toggleSort("spot")}>
                   Precio
                   <Info k="price" />
+                  {arrow("spot")}
                 </th>
-                <th rowSpan={2}>
+                <th rowSpan={2} className="sortable" onClick={() => toggleSort("change_pct")}>
                   Var.
                   <Info k="change" />
+                  {arrow("change_pct")}
                 </th>
-                <th rowSpan={2}>
+                <th rowSpan={2} className="sortable" onClick={() => toggleSort("volume")}>
                   Volumen
                   <Info k="volume_stock" />
-                </th>
-                <th rowSpan={2} title="Volatilidad histórica 30d anualizada">
-                  VH 30d
-                  <Info k="hv30" />
-                </th>
-                <th rowSpan={2} title="Posición del precio dentro del rango de 52 semanas">
-                  Pos. 52s
-                  <Info k="pos52" />
+                  {arrow("volume")}
                 </th>
                 <th
                   rowSpan={2}
+                  className="sortable"
+                  title="Volatilidad histórica 30d anualizada"
+                  onClick={() => toggleSort("hv30")}
+                >
+                  VH 30d
+                  <Info k="hv30" />
+                  {arrow("hv30")}
+                </th>
+                <th
+                  rowSpan={2}
+                  className="sortable"
+                  title="Posición del precio dentro del rango de 52 semanas"
+                  onClick={() => toggleSort("range52w_pct")}
+                >
+                  Pos. 52s
+                  <Info k="pos52" />
+                  {arrow("range52w_pct")}
+                </th>
+                <th
+                  rowSpan={2}
+                  className="sortable"
                   title="Percentil de la volatilidad histórica 30d frente al último año"
+                  onClick={() => toggleSort("hv_percentile_52w")}
                 >
                   Pct. VH 52s
                   <Info k="pct_hv52" />
+                  {arrow("hv_percentile_52w")}
                 </th>
-                <th rowSpan={2}>
+                <th rowSpan={2} className="sortable" onClick={() => toggleSort("dte")}>
                   Exp. (DTE)
                   <Info k="expiration" />
+                  {arrow("dte")}
                 </th>
-                <th rowSpan={2}>
+                <th rowSpan={2} className="sortable" onClick={() => toggleSort("atm_strike")}>
                   Strike ATM
                   <Info k="strike_atm" />
+                  {arrow("atm_strike")}
                 </th>
-                <th rowSpan={2}>
+                <th rowSpan={2} className="sortable" onClick={() => toggleSort("atm_iv")}>
                   VI ATM
                   <Info k="iv_atm" />
+                  {arrow("atm_iv")}
                 </th>
                 <th colSpan={4} className="greek-group">
                   Call
@@ -243,7 +309,7 @@ export default function TickerOverview({
               </tr>
             </thead>
             <tbody>
-              {items.map((it) => (
+              {sorted.map((it) => (
                 <tr
                   key={it.ticker}
                   className={selected === it.ticker ? "selected overview-row" : "overview-row"}
@@ -253,7 +319,21 @@ export default function TickerOverview({
                     if (e.key === "Enter") onSelect(selected === it.ticker ? null : it.ticker);
                   }}
                 >
-                  <td>{it.ticker}</td>
+                  <td>
+                    <button
+                      type="button"
+                      className="row-remove"
+                      aria-label={`Quitar ${it.ticker}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onTickersChange(tickers.filter((x) => x !== it.ticker));
+                      }}
+                      onKeyDown={(e) => e.stopPropagation()}
+                    >
+                      ×
+                    </button>
+                    {it.ticker}
+                  </td>
                   <td>{it.spot > 0 ? nf.format(it.spot) : "—"}</td>
                   <td className={it.change === null ? "" : it.change >= 0 ? "pos" : "neg"}>
                     {it.change === null
