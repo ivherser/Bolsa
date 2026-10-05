@@ -52,7 +52,8 @@ export const HELP = {
   macd: "MACD (12, 26, 9): diferencia entre EMA 12 y EMA 26 (azul), su señal EMA 9 (naranja) y el histograma entre ambas.",
   draw: "Línea: activa el modo dibujo; pulsa dos puntos del gráfico para trazar una línea. Esc para salir.",
   exp_marker: "La línea vertical amarilla marca la expiración seleccionada en la cadena de opciones.",
-  chain: "Cadena: primas por strike para la expiración elegida; calls a la izquierda, puts a la derecha.",
+  chain:
+    "Cadena: primas por strike para la expiración elegida; calls a la izquierda, puts a la derecha. Pulsa una fila para marcar ese strike con una línea horizontal en el gráfico.",
 } as const;
 
 export type HelpKey = keyof typeof HELP;

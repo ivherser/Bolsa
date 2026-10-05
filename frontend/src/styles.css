@@ -807,3 +807,15 @@ footer.disclaimer {
 .exp-marker .info-dot {
   pointer-events: auto;
 }
+
+.chain-table tbody tr {
+  cursor: pointer;
+}
+
+.strike-selected td {
+  background: rgba(255, 122, 182, 0.14);
+}
+
+.strike-selected .strike-col {
+  color: #ff7ab6;
+}

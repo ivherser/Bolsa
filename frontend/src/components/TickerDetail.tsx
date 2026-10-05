@@ -81,6 +81,7 @@ interface Props {
 export default function TickerDetail({ ticker, onClose, onError }: Props) {
   const [chain, setChain] = useState<ChainResponse | null>(null);
   const [expiration, setExpiration] = useState<string | null>(null);
+  const [strike, setStrike] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
@@ -114,6 +115,7 @@ export default function TickerDetail({ ticker, onClose, onError }: Props) {
     setChain(null);
     setExpiration(null);
     setShowAll(false);
+    setStrike(null);
     void load();
     return () => abortRef.current?.abort();
   }, [load]);
@@ -146,6 +148,7 @@ export default function TickerDetail({ ticker, onClose, onError }: Props) {
       <CandleChart
         ticker={ticker}
         expiration={expiration}
+        strike={strike}
         expirationDte={chain?.expirations.find((e) => e.date === expiration)?.dte ?? null}
         onError={onError}
       />
@@ -247,6 +250,8 @@ export default function TickerDetail({ ticker, onClose, onError }: Props) {
                           row={r}
                           spot={spot}
                           crossed={crossed}
+                          selected={strike === r.strike}
+                          onSelect={(s) => setStrike((v) => (v === s ? null : s))}
                         />
                       );
                     })}
@@ -274,10 +279,14 @@ function FragmentRow({
   row,
   spot,
   crossed,
+  selected,
+  onSelect,
 }: {
   row: { strike: number; call: ChainLeg | null; put: ChainLeg | null };
   spot: number;
   crossed: boolean;
+  selected: boolean;
+  onSelect: (s: number) => void;
 }) {
   return (
     <>
@@ -286,7 +295,10 @@ function FragmentRow({
           <td colSpan={13}>Precio actual {nf.format(spot)}</td>
         </tr>
       )}
-      <tr>
+      <tr
+        className={selected ? "strike-selected" : undefined}
+        onClick={() => onSelect(row.strike)}
+      >
         <CallCells leg={row.call} itm={row.strike < spot} />
         <td className="strike-col">{nf.format(row.strike)}</td>
         <PutCells leg={row.put} itm={row.strike > spot} />
