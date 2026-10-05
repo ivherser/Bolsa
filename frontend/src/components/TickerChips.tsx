@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Info } from "./Help";
 
 const TICKER_RE = /^\^?[A-Z0-9][A-Z0-9.\-]{0,9}$/;
 const MAX = 10;
@@ -43,7 +44,10 @@ export default function TickerChips({ tickers, onChange }: Props) {
 
   return (
     <div className="field">
-      <label>Tickers ({tickers.length}/{MAX})</label>
+      <label>
+        Tickers ({tickers.length}/{MAX})
+        <Info k="tickers" />
+      </label>
       <div className="chips">
         {tickers.map((t) => (
           <span key={t} className="chip">

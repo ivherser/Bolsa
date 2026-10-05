@@ -3,8 +3,10 @@ import {
   createChart,
   HistogramSeries,
   LineSeries,
+  LineStyle,
 } from "lightweight-charts";
 import type {
+  AutoscaleInfo,
   IChartApi,
   ISeriesApi,
   MouseEventParams,
@@ -22,6 +24,7 @@ import {
 } from "../storage";
 import type { ChartPrefs, DrawnLine } from "../storage";
 import type { Candle, HistoryInterval } from "../types";
+import { Info } from "./Help";
 
 const INTERVALS: { id: HistoryInterval; label: string }[] = [
   { id: "1h", label: "1H" },
@@ -104,11 +107,13 @@ export default function CandleChart({
   ticker,
   expiration,
   expirationDte,
+  strike,
   onError,
 }: {
   ticker: string;
   expiration: string | null;
   expirationDte: number | null;
+  strike: number | null;
   onError: () => void;
 }) {
   const [interval, setInterval] = useState<HistoryInterval>("1d");
@@ -444,6 +449,44 @@ export default function CandleChart({
     };
   }, [drawMode, ready, ticker, interval]);
 
+  // Línea horizontal en el strike elegido en la cadena
+  useEffect(() => {
+    const candleSeries = candleSeriesRef.current;
+    if (!candleSeries || !ready || strike === null) return;
+    const line = candleSeries.createPriceLine({
+      price: strike,
+      color: "#ff7ab6",
+      lineWidth: 1,
+      lineStyle: LineStyle.Dashed,
+      axisLabelVisible: true,
+      title: `Strike ${strike}`,
+    });
+    candleSeries.applyOptions({
+      autoscaleInfoProvider: (base: () => AutoscaleInfo | null) => {
+        const r = base();
+        if (!r || !r.priceRange) return r;
+        return {
+          ...r,
+          priceRange: {
+            minValue: Math.min(r.priceRange.minValue, strike),
+            maxValue: Math.max(r.priceRange.maxValue, strike),
+          },
+        };
+      },
+    });
+    return () => {
+      const s = candleSeriesRef.current;
+      if (s) {
+        try {
+          s.removePriceLine(line);
+        } catch {
+          /* chart ya eliminado */
+        }
+        s.applyOptions({ autoscaleInfoProvider: (base: () => AutoscaleInfo | null) => base() });
+      }
+    };
+  }, [strike, ready]);
+
   // Whitespace hasta la expiración + marcador vertical
   useEffect(() => {
     const chart = chartRef.current;
@@ -527,6 +570,7 @@ export default function CandleChart({
               {o.label}
             </button>
           ))}
+          <Info k="interval" />
         </div>
         <div className="ind-tabs">
           {SMA_DEFS.map((d) => (
@@ -540,6 +584,7 @@ export default function CandleChart({
               {d.label}
             </button>
           ))}
+          <Info k="sma" />
           <button
             type="button"
             className={prefs.rsi ? "tab active" : "tab"}
@@ -547,6 +592,7 @@ export default function CandleChart({
           >
             RSI
           </button>
+          <Info k="rsi" />
           <button
             type="button"
             className={prefs.macd ? "tab active" : "tab"}
@@ -554,6 +600,7 @@ export default function CandleChart({
           >
             MACD
           </button>
+          <Info k="macd" />
           <button
             type="button"
             className={drawMode ? "tab active" : "tab"}
@@ -565,6 +612,7 @@ export default function CandleChart({
           >
             Línea
           </button>
+          <Info k="draw" />
           <button type="button" className="tab" onClick={clearLines}>
             Borrar líneas
           </button>
@@ -584,6 +632,7 @@ export default function CandleChart({
               style={marker.flip ? { right: 4, left: "auto" } : undefined}
             >
               {marker.label}
+              <Info k="exp_marker" />
             </span>
           </div>
         )}

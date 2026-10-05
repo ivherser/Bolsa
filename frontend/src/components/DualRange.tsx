@@ -1,3 +1,6 @@
+import { Info } from "./Help";
+import type { HelpKey } from "../help";
+
 interface Props {
   label: string;
   min: number;
@@ -7,6 +10,7 @@ interface Props {
   high: number;
   onChange: (low: number, high: number) => void;
   format?: (v: number) => string;
+  help?: HelpKey;
 }
 
 export default function DualRange({
@@ -18,6 +22,7 @@ export default function DualRange({
   high,
   onChange,
   format = (v) => String(v),
+  help,
 }: Props) {
   const span = max - min;
   const clamp = (v: number) => Math.min(100, Math.max(0, v));
@@ -27,6 +32,7 @@ export default function DualRange({
     <div className="field">
       <label>
         {label}: {format(low)} – {format(high)}
+        {help && <Info k={help} />}
       </label>
       <div className="dual-range">
         <div className="dual-range-track" />

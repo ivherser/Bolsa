@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchOverview } from "../api";
 import type { Greeks, TickerOverviewItem } from "../types";
+import { Info } from "./Help";
 
 const nf = new Intl.NumberFormat("es-ES", { maximumFractionDigits: 2 });
 const nf4 = new Intl.NumberFormat("es-ES", {
@@ -123,7 +124,10 @@ export default function TickerOverview({
       <div className="overview-header">
         <h2>Resumen de tickers</h2>
         <div className="overview-controls">
-          <label htmlFor="overview-dte">DTE objetivo</label>
+          <label htmlFor="overview-dte">
+            DTE objetivo
+            <Info k="dte_target" />
+          </label>
           <input
             id="overview-dte"
             type="number"
@@ -157,24 +161,45 @@ export default function TickerOverview({
             <thead>
               <tr>
                 <th rowSpan={2}>Ticker</th>
-                <th rowSpan={2}>Precio</th>
-                <th rowSpan={2}>Var.</th>
-                <th rowSpan={2}>Volumen</th>
+                <th rowSpan={2}>
+                  Precio
+                  <Info k="price" />
+                </th>
+                <th rowSpan={2}>
+                  Var.
+                  <Info k="change" />
+                </th>
+                <th rowSpan={2}>
+                  Volumen
+                  <Info k="volume_stock" />
+                </th>
                 <th rowSpan={2} title="Volatilidad histórica 30d anualizada">
                   VH 30d
+                  <Info k="hv30" />
                 </th>
                 <th rowSpan={2} title="Posición del precio dentro del rango de 52 semanas">
                   Pos. 52s
+                  <Info k="pos52" />
                 </th>
                 <th
                   rowSpan={2}
                   title="Percentil de la volatilidad histórica 30d frente al último año"
                 >
                   Pct. VH 52s
+                  <Info k="pct_hv52" />
                 </th>
-                <th rowSpan={2}>Exp. (DTE)</th>
-                <th rowSpan={2}>Strike ATM</th>
-                <th rowSpan={2}>VI ATM</th>
+                <th rowSpan={2}>
+                  Exp. (DTE)
+                  <Info k="expiration" />
+                </th>
+                <th rowSpan={2}>
+                  Strike ATM
+                  <Info k="strike_atm" />
+                </th>
+                <th rowSpan={2}>
+                  VI ATM
+                  <Info k="iv_atm" />
+                </th>
                 <th colSpan={4} className="greek-group">
                   Call
                 </th>
@@ -183,14 +208,38 @@ export default function TickerOverview({
                 </th>
               </tr>
               <tr>
-                <th className="greek-group">Δ</th>
-                <th>Γ</th>
-                <th>Θ</th>
-                <th>ν</th>
-                <th className="greek-group">Δ</th>
-                <th>Γ</th>
-                <th>Θ</th>
-                <th>ν</th>
+                <th className="greek-group">
+                  Δ
+                  <Info k="delta" />
+                </th>
+                <th>
+                  Γ
+                  <Info k="gamma" />
+                </th>
+                <th>
+                  Θ
+                  <Info k="theta" />
+                </th>
+                <th>
+                  ν
+                  <Info k="vega" />
+                </th>
+                <th className="greek-group">
+                  Δ
+                  <Info k="delta" />
+                </th>
+                <th>
+                  Γ
+                  <Info k="gamma" />
+                </th>
+                <th>
+                  Θ
+                  <Info k="theta" />
+                </th>
+                <th>
+                  ν
+                  <Info k="vega" />
+                </th>
               </tr>
             </thead>
             <tbody>

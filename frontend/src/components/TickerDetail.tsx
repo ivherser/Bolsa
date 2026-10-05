@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchChain } from "../api";
 import type { ChainLeg, ChainResponse } from "../types";
 import CandleChart from "./CandleChart";
+import { Info } from "./Help";
 
 const nf = new Intl.NumberFormat("es-ES", { maximumFractionDigits: 2 });
 const nf4 = new Intl.NumberFormat("es-ES", {
@@ -80,6 +81,7 @@ interface Props {
 export default function TickerDetail({ ticker, onClose, onError }: Props) {
   const [chain, setChain] = useState<ChainResponse | null>(null);
   const [expiration, setExpiration] = useState<string | null>(null);
+  const [strike, setStrike] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
@@ -113,6 +115,7 @@ export default function TickerDetail({ ticker, onClose, onError }: Props) {
     setChain(null);
     setExpiration(null);
     setShowAll(false);
+    setStrike(null);
     void load();
     return () => abortRef.current?.abort();
   }, [load]);
@@ -145,6 +148,7 @@ export default function TickerDetail({ ticker, onClose, onError }: Props) {
       <CandleChart
         ticker={ticker}
         expiration={expiration}
+        strike={strike}
         expirationDte={chain?.expirations.find((e) => e.date === expiration)?.dte ?? null}
         onError={onError}
       />
@@ -174,29 +178,65 @@ export default function TickerDetail({ ticker, onClose, onError }: Props) {
                 <table className="chain-table">
                   <thead>
                     <tr>
-                      <th colSpan={6}>CALLS</th>
+                      <th colSpan={6}>
+                        CALLS
+                        <Info k="chain" />
+                      </th>
                       <th rowSpan={2} className="strike-col">
                         Strike
+                        <Info k="strike" />
                       </th>
                       <th colSpan={6}>PUTS</th>
                     </tr>
                     <tr>
-                      <th>Bid</th>
-                      <th>Ask</th>
-                      <th>Mid</th>
-                      <th>VI</th>
-                      <th>Δ</th>
-                      <th title="Probabilidad de éxito vendiendo la opción (expira OTM, lognormal con la VI)">
-                        POP
+                      <th>
+                        Bid
+                        <Info k="bid" />
+                      </th>
+                      <th>
+                        Ask
+                        <Info k="ask" />
+                      </th>
+                      <th>
+                        Mid
+                        <Info k="mid" />
+                      </th>
+                      <th>
+                        VI
+                        <Info k="iv" />
+                      </th>
+                      <th>
+                        Δ
+                        <Info k="delta" />
                       </th>
                       <th title="Probabilidad de éxito vendiendo la opción (expira OTM, lognormal con la VI)">
                         POP
+                        <Info k="pop_short" />
                       </th>
-                      <th>Δ</th>
-                      <th>VI</th>
-                      <th>Mid</th>
-                      <th>Ask</th>
-                      <th>Bid</th>
+                      <th title="Probabilidad de éxito vendiendo la opción (expira OTM, lognormal con la VI)">
+                        POP
+                        <Info k="pop_short" />
+                      </th>
+                      <th>
+                        Δ
+                        <Info k="delta" />
+                      </th>
+                      <th>
+                        VI
+                        <Info k="iv" />
+                      </th>
+                      <th>
+                        Mid
+                        <Info k="mid" />
+                      </th>
+                      <th>
+                        Ask
+                        <Info k="ask" />
+                      </th>
+                      <th>
+                        Bid
+                        <Info k="bid" />
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -210,6 +250,8 @@ export default function TickerDetail({ ticker, onClose, onError }: Props) {
                           row={r}
                           spot={spot}
                           crossed={crossed}
+                          selected={strike === r.strike}
+                          onSelect={(s) => setStrike((v) => (v === s ? null : s))}
                         />
                       );
                     })}
@@ -237,10 +279,14 @@ function FragmentRow({
   row,
   spot,
   crossed,
+  selected,
+  onSelect,
 }: {
   row: { strike: number; call: ChainLeg | null; put: ChainLeg | null };
   spot: number;
   crossed: boolean;
+  selected: boolean;
+  onSelect: (s: number) => void;
 }) {
   return (
     <>
@@ -249,7 +295,10 @@ function FragmentRow({
           <td colSpan={13}>Precio actual {nf.format(spot)}</td>
         </tr>
       )}
-      <tr>
+      <tr
+        className={selected ? "strike-selected" : undefined}
+        onClick={() => onSelect(row.strike)}
+      >
         <CallCells leg={row.call} itm={row.strike < spot} />
         <td className="strike-col">{nf.format(row.strike)}</td>
         <PutCells leg={row.put} itm={row.strike > spot} />
