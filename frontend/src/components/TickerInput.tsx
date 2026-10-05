@@ -9,7 +9,7 @@ interface Props {
   onChange: (tickers: string[]) => void;
 }
 
-export default function TickerChips({ tickers, onChange }: Props) {
+export default function TickerInput({ tickers, onChange }: Props) {
   const [input, setInput] = useState("");
   const [hint, setHint] = useState("");
 
@@ -37,39 +37,24 @@ export default function TickerChips({ tickers, onChange }: Props) {
     if (e.key === "Enter" || e.key === ",") {
       e.preventDefault();
       add(input);
-    } else if (e.key === "Backspace" && input === "" && tickers.length) {
-      onChange(tickers.slice(0, -1));
     }
   };
 
   return (
-    <div className="field">
-      <label>
-        Tickers ({tickers.length}/{MAX})
-        <Info k="tickers" />
-      </label>
-      <div className="chips">
-        {tickers.map((t) => (
-          <span key={t} className="chip">
-            {t}
-            <button
-              type="button"
-              aria-label={`Quitar ${t}`}
-              onClick={() => onChange(tickers.filter((x) => x !== t))}
-            >
-              ×
-            </button>
-          </span>
-        ))}
-      </div>
+    <div className="ticker-input">
       <input
         type="text"
         value={input}
-        placeholder="Añadir ticker (Enter o coma)"
+        placeholder="Añadir ticker…"
+        aria-label="Añadir ticker"
         onChange={(e) => setInput(e.target.value)}
         onKeyDown={onKeyDown}
         onBlur={() => input && add(input)}
       />
+      <span className="ticker-count">
+        {tickers.length}/{MAX}
+      </span>
+      <Info k="tickers" />
       {hint && <div className="hint">{hint}</div>}
     </div>
   );

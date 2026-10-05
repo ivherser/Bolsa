@@ -388,14 +388,56 @@ footer.disclaimer {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .overview-controls label {
   margin: 0;
 }
 
-.overview-controls input {
+.overview-controls input#overview-dte {
   width: 70px;
+}
+
+.ticker-input {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ticker-input input {
+  width: 160px;
+}
+
+.ticker-input .ticker-count {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.ticker-input .hint {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  white-space: nowrap;
+  z-index: 10;
+}
+
+.row-remove {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 12px;
+  padding: 0 4px 0 0;
+  cursor: pointer;
+}
+
+.row-remove:hover {
+  color: var(--red);
+}
+
+th.sortable {
+  cursor: pointer;
 }
 
 .overview-scroll {

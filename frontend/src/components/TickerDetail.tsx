@@ -121,6 +121,14 @@ export default function TickerDetail({ ticker, onClose, onError }: Props) {
   }, [load]);
 
   const pick = (exp: string) => {
+    if (exp === expiration) {
+      abortRef.current?.abort();
+      setLoading(false);
+      setExpiration(null);
+      setStrike(null);
+      setShowAll(false);
+      return;
+    }
     setExpiration(exp);
     setShowAll(false);
     void load(exp);

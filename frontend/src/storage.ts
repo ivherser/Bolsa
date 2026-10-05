@@ -1,5 +1,5 @@
 import { DEFAULT_PRESET_ID, DEFAULT_TICKERS, PRESETS } from "./presets";
-import type { Filters } from "./types";
+import type { Filters, OverviewSortKey } from "./types";
 
 const KEY = "bolsa:state:v1";
 const TICKER_RE = /^\^?[A-Z0-9][A-Z0-9.\-]{0,9}$/;
@@ -10,7 +10,21 @@ export interface PersistedState {
   presetId: string;
   filters: Filters;
   overviewDte: number;
+  overviewSort: { key: OverviewSortKey; dir: "asc" | "desc" } | null;
 }
+
+export const OVERVIEW_SORT_KEYS: readonly OverviewSortKey[] = [
+  "ticker",
+  "spot",
+  "change_pct",
+  "volume",
+  "hv30",
+  "range52w_pct",
+  "hv_percentile_52w",
+  "dte",
+  "atm_strike",
+  "atm_iv",
+];
 
 export function defaultState(): PersistedState {
   return {
@@ -18,6 +32,7 @@ export function defaultState(): PersistedState {
     presetId: DEFAULT_PRESET_ID,
     filters: PRESETS.find((p) => p.id === DEFAULT_PRESET_ID)!.filters,
     overviewDte: 30,
+    overviewSort: null,
   };
 }
 
@@ -100,7 +115,18 @@ export function loadState(): PersistedState {
       overviewDte = data.overviewDte;
     }
 
-    return { tickers, presetId, filters, overviewDte };
+    let overviewSort = defaults.overviewSort;
+    const os = data.overviewSort as Record<string, unknown> | null;
+    if (
+      typeof os === "object" &&
+      os !== null &&
+      OVERVIEW_SORT_KEYS.includes(os.key as OverviewSortKey) &&
+      (os.dir === "asc" || os.dir === "desc")
+    ) {
+      overviewSort = { key: os.key as OverviewSortKey, dir: os.dir };
+    }
+
+    return { tickers, presetId, filters, overviewDte, overviewSort };
   } catch {
     return defaults;
   }

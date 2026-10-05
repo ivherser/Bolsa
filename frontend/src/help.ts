@@ -2,7 +2,7 @@ export const HELP = {
   preset:
     "Estrategia predefinida: rellena los filtros con valores típicos para vender una put (Short Put) o una call (Short Call).",
   tickers:
-    "Símbolos a analizar (máx. 10). Escribe y pulsa Enter o coma para añadir; × para quitar. Se guardan al recargar.",
+    "Símbolos a analizar (máx. 10). El buscador está en la cabecera de la Lista de tickers: escribe y pulsa Enter o coma para añadir, × a la izquierda del nombre para quitar, y pulsa las cabeceras de las columnas para ordenar. Se guardan al recargar.",
   option_type: "Tipo de contrato: put (derecho a vender), call (derecho a comprar) o ambos.",
   strategy:
     "Cómo se opera la opción: venta (short, cobras prima), compra (long, pagas prima) o credit spread (venta + compra de protección).",
@@ -30,7 +30,8 @@ export const HELP = {
   bid: "Bid: mejor precio al que alguien compra la opción ahora mismo (lo que cobras si vendes).",
   ask: "Ask: mejor precio al que alguien vende la opción ahora mismo (lo que pagas si compras).",
   mid: "Mid: punto medio entre bid y ask; referencia del precio justo de la prima.",
-  expiration: "Expiración (DTE): fecha de vencimiento del contrato y días que faltan.",
+  expiration:
+    "Expiración (DTE): fecha de vencimiento del contrato y días que faltan. Pulsa de nuevo la expiración seleccionada para ocultar la cadena y la línea vertical.",
   dte_target:
     "DTE objetivo: el resumen usa la expiración más cercana a este número de días para calcular la VI y las griegas ATM.",
   price: "Precio: último precio del subyacente (con retraso de ~15 min).",
