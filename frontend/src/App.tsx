@@ -12,6 +12,7 @@ import TickerOverview from "./components/TickerOverview";
 import { PRESETS } from "./presets";
 import { clearState, defaultState, loadState, saveState } from "./storage";
 import type { Filters, OptionResult } from "./types";
+import { APP_VERSION } from "./version";
 
 export default function App() {
   const [persisted] = useState(loadState);
@@ -90,6 +91,9 @@ export default function App() {
         <h1>Bolsa — Screener de opciones</h1>
         <div className="header-right">
           <SourceStatus refreshKey={searchErrorKey} lastSearchOk={lastSearchOk} />
+          <span className="app-version" title="Versión">
+            {APP_VERSION}
+          </span>
           <HelpToggle on={help} onToggle={() => setHelp((v) => !v)} />
         </div>
       </header>
